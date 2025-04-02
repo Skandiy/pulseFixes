@@ -1,0 +1,36 @@
+{
+  "name": "Pulse Fixes",
+  "description": "Дополнительные функции для пульса и фиксы багов",
+  "version": "1.1.7",
+  "manifest_version": 2,
+  "browser_action": {
+    "default_icon": {
+      "16": "icons/16.png",
+      "32": "icons/32.png",
+      "48": "icons/48.png",
+      "64": "icons/64.png"
+    },
+    "default_title": "Pulse Fixes"
+  },
+  "icons": {
+    "128": "icons/128.png",
+    "16": "icons/16.png",
+    "32": "icons/32.png",
+    "48": "icons/48.png",
+    "64": "icons/64.png"
+  },
+  "permissions": ["activeTab", "scripting", "storage", "https://pulse.stack-it.ru/*"],
+  "host_permissions": ["https://pulse.stack-it.ru/*"],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ],
+  "web_accessible_resources": [
+    "injected.js"
+  ],
+  "background": {
+    "service_worker": "service-worker.js"
+  }
+}
