@@ -1,5 +1,6 @@
 (function () {
     const _parse = JSON.parse;
+    const _stringify = JSON.stringify;
 
     let customParse = function (arg) {
         let parsed = _parse(arg);
@@ -8,7 +9,7 @@
         if (parsed.data && parsed.data.authentication && parsed.data.authentication.frontendPermissionsForActiveUser) {
             console.log("PULSE FIXES")
             parsed.data.authentication.frontendPermissionsForActiveUser.map((perm) => {
-                console.log(perm)
+                // console.log(perm)
                 // Права на редактирование проекта
                 if (perm.name == 'pulse/projects/:id') {
                     perm.option = "ALLOWED";
@@ -17,7 +18,7 @@
                 if (perm.name == 'pulse/analytics/retrospective/employees.*') {
                     perm.option = "ALLOWED";
                 }
-                console.log(perm)
+                // console.log(perm)
                 return perm
             });
         }
@@ -43,7 +44,44 @@
         return parsed;
     };
 
+    let customStringify = function (arg, replacer, space) {
+
+        // Получить ретроспективу по другому сотруднику.
+        // P.S. в фильтрах все равно будет отображаться авторизованный пользователь, но данные будут по указанному
+        const userId = 180;
+        const enable = false;
+
+        if (arg?.tasks?.[0]?.objectName == 'Ретроспектива.Сотрудники' && enable) {
+            // if (arg?.tasks?.[0]?.methodName == 'ПолучитьПраваНаРетроспективу') {
+            //     arg.tasks[0].params['сотрудник'] = 180
+            // }
+
+            if (arg?.tasks?.[0]?.methodName == 'ПолучитьЭффективность') {
+                let tmp = _parse(arg.tasks[0].params['фильтр']['сотрудник'])
+                tmp.value = userId
+                arg.tasks[0].params['фильтр']['сотрудник'] = _stringify(tmp)
+            }
+
+            if (arg?.tasks?.[0]?.methodName == 'ПолучитьТрудозатраты') {
+                let tmp = _parse(arg.tasks[0].params['фильтр']['сотрудник'])
+                tmp.value = userId
+                arg.tasks[0].params['фильтр']['сотрудник'] = _stringify(tmp)
+            }
+
+            if (arg?.tasks?.[0]?.methodName == '"ПолучитьАналитикуПоТрекерам"') {
+                let tmp = _parse(arg.tasks[0].params['фильтр']['сотрудник'])
+                tmp.value = userId
+                arg.tasks[0].params['фильтр']['сотрудник'] = _stringify(tmp)
+            }
+        }
+
+        let stringify = _stringify(arg, replacer, space);
+
+        return stringify;
+    };
+
     JSON.parse = customParse;
+    JSON.stringify = customStringify;
 
     // Свой календарь
     window.addEventListener('load', function () {
