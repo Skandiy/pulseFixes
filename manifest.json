@@ -1,7 +1,7 @@
 {
   "name": "Pulse Fixes",
   "description": "Дополнительные функции для пульса и фиксы багов",
-  "version": "1.1.8",
+  "version": "1.1.9",
   "manifest_version": 2,
   "browser_action": {
     "default_icon": {

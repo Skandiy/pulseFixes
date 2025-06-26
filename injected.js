@@ -35,8 +35,11 @@
             const indWrite = parsed.tasks[0].result['поля'].indexOf('редактировать');
 
             parsed.tasks[0].result['записи'].map((task) => {
-                task[indRead] = 1;
-                task[indWrite] = 1;
+                console.log(task)
+                if (task[12] !== 'Период выполнения работы') {
+                    task[indRead] = 1;
+                    task[indWrite] = 1;
+                }
                 return task
             });
         }
@@ -48,7 +51,7 @@
 
         // Получить ретроспективу по другому сотруднику.
         // P.S. в фильтрах все равно будет отображаться авторизованный пользователь, но данные будут по указанному
-        const userId = 180;
+        const userId = 1730;
         const enable = false;
 
         if (arg?.tasks?.[0]?.objectName == 'Ретроспектива.Сотрудники' && enable) {
