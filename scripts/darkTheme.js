@@ -6,34 +6,10 @@
     }
 
     function _ () {
-        setTimeout(() => {
-            document.querySelector('#VUETIFY_THEME_SERVICE').remove()
-        }, 100);
-
-        // Функция для замены классов и стилей на странице
-        function init() {
-            commentStyle();
-            imageClose();
-        }
-
-        function imageClose() {
-            const v = document.querySelectorAll('.stack-image-viewer')[0]
-            if (v)
-                v.addEventListener('click', () => {
-                    v.querySelector('button').click();
-                })
-        }
-
-        function initThemeApp() {
-            // функционал переключения темы
-        }
-
         /**
          * Функция для добавления нового элемента в блок сразу после его появления на странице.
          */
         function addThemeBtn(newElementHTML) {
-
-            // let selector = document.querySelectorAll('header .v-toolbar__content > div > div > div:last-of-type')[0]
             let selector = 'header'
 
             const svg = '<svg id="_Слой_1" class="v-icon__svg" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10,10-4.48,10-10S17.52,2,12,2Zm0,16.98c-3.85,0-6.98-3.12-6.98-6.98s3.12-6.98,6.98-6.98,6.98,3.12,6.98,6.98-3.12,6.98-6.98,6.98Z"/><path d="M12,6.04v11.93c3.29,0,5.96-2.67,5.96-5.96s-2.67-5.96-5.96-5.96Z"/></svg>';
@@ -77,6 +53,25 @@
             });
         }
 
+        function themeChange() {
+            if (theme === 'light') {
+                theme = 'dark';
+                localStorage.setItem('PulsePlus_Theme', theme);
+            } else {
+                theme = 'light';
+                localStorage.setItem('PulsePlus_Theme', theme);
+            }
+            themeSet()
+        }
+
+        function themeSet() {
+            if (theme === 'light') {
+                document.body.classList.toggle('pulse-fixed-dark-theme', false)
+            } else {
+                document.body.classList.toggle('pulse-fixed-dark-theme', true)
+            }
+        }
+
         let theme = localStorage.getItem('PulsePlus_Theme');
 
         if (!theme) {
@@ -84,21 +79,6 @@
         }
 
         addThemeBtn()
-
-        function themeChange() {
-            if (theme === 'light') {
-                theme = 'dark';
-                localStorage.setItem('PulsePlus_Theme', theme);
-                initThemeApp()
-            } else {
-                theme = 'light';
-                localStorage.setItem('PulsePlus_Theme', theme);
-                window.location.reload()
-            }
-        }
-
-        if (theme === 'dark') {
-            initThemeApp()
-        }
+        themeSet()
     }
 })()
