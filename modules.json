@@ -1,0 +1,13 @@
+{
+  "scripts": [
+    "scripts/rules.js",
+    "scripts/darkTheme.js"
+  ],
+  "styles": [
+    "styles/darkThemeCustom.css",
+    "styles/darkThemeVariables.css",
+    "styles/darkThemeVariablesUsed.css",
+    "styles/darkThemeClassStyles.css",
+    "styles/calendar.css"
+  ]
+}

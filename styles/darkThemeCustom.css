@@ -1,0 +1,45 @@
+
+/*
+    Переопределение стилей для элементов которые не используют css переменные
+*/
+.stack-app {
+    background-color: var(--v-base-1-base) !important;
+}
+
+.app-toolbar {
+    box-shadow: 0 0 32px #494b4f3d !important;
+}
+
+.v-application .white {
+    /*background-color: initial !important;*/
+    background-color: #272727 !important;
+}
+
+.simple-badge {
+    color: #000 !important;
+}
+
+.StackMarkdown {
+    .editor-preview {
+        background-color: #1e1e1e !important;
+    }
+    .CodeMirror {
+        background: #1e1e1e !important;
+        color: #9e9e9e !important
+    }
+    .editor-preview {
+        background: #1e1e1e !important;
+    }
+    .editor-preview pre {
+        background: #313132 !important;
+    }
+    .cm-s-easymde .cm-comment {
+        background: #ffffff1f !important;
+        border-radius: 0 !important;
+    }
+    .CodeMirror-line span {
+        & > span:only-child {
+            display: inline-block;
+        }
+    }
+}

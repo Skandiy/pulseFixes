@@ -1,0 +1,39 @@
+/* Стили календаря */
+
+.stack-calendar {
+    [hide-buttons] {
+        .stack-calendar-light__month-item {
+            div:nth-last-child(1) {
+                & > div {
+                    margin-top: 0 !important;
+                    & > div {
+                        height: 34px !important;
+                        display: flex !important;
+                        justify-content: center !important;
+                    }
+                }
+            }
+        }
+    }
+    .stack-calendar__month__day-btn {
+        width: 30px !important;
+        height: 30px !important;
+        margin: 2px 0 0 0 !important;
+        display: flex !important;
+        justify-content: center !important;
+
+        .dot {
+            background: var(--v-warning-base) !important;
+            width: 8px !important;
+            height: 8px !important;
+            margin-right: 0 !important;
+            /*right: -2px !important;*/
+            bottom: 0 !important;
+        }
+    }
+
+    & > div > div:nth-child(2) > div > div > .indigo {
+        background-color: #5c6bc0 !important;
+        border-color: #5c6bc0 !important;
+    }
+}
