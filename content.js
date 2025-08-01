@@ -6,9 +6,24 @@
     const response = await fetch(modulesJsonUrl);
     const {scripts = [], styles = []} = await response.json();
 
+    // 2. Загружаем настройки из хранилища (sync или local)
+    const settings = await new Promise((resolve) => {
+        chrome.storage.sync.get(null, resolve); // Можно заменить на .local если используешь локально
+    });
+
     // 1. Добавляем стили
     for (const path of styles) {
-        const styleUrl = chrome.runtime.getURL(path);
+        let styleUrl = '';
+        if (path instanceof Object) {
+            if (!!settings[path.key]) {
+                styleUrl = chrome.runtime.getURL(path.value);
+            } else {
+                continue;
+            }
+        } else {
+            styleUrl = chrome.runtime.getURL(path);
+        }
+
         const link = document.createElement('link');
         link.rel = 'stylesheet';
         link.href = styleUrl;
@@ -16,11 +31,6 @@
         link.dataset.from = 'pulse-extension';
         document.head.appendChild(link);
     }
-
-    // 2. Загружаем настройки из хранилища (sync или local)
-    const settings = await new Promise((resolve) => {
-        chrome.storage.sync.get(null, resolve); // Можно заменить на .local если используешь локально
-    });
 
     window.PULSE_EXTENSION_SETTINGS = JSON.stringify(settings);
 

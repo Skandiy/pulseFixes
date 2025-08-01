@@ -28,7 +28,6 @@ const load = async function () {
     }
 
     function checkboxChange(ev) {
-        console.log(ev.target.checked)
         const key = ev.target.id
         const value = ev.target.checked
 

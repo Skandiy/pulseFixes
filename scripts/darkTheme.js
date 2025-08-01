@@ -78,7 +78,12 @@
             theme = 'light'
         }
 
-        addThemeBtn()
-        themeSet()
+        getPulseSettings()
+            .then((settings) => {
+                if (!!settings.changeTheme) {
+                    addThemeBtn()
+                    themeSet()
+                }
+            })
     }
 })()

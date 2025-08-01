@@ -9,6 +9,9 @@
     "styles/darkThemeVariables.css",
     "styles/darkThemeVariablesUsed.css",
     "styles/darkThemeClassStyles.css",
-    "styles/calendar.css"
+    {
+      "key": "changeCalendar",
+      "value": "styles/calendar.css"
+    }
   ]
 }
