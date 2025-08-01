@@ -8,7 +8,7 @@
 
     // 2. Загружаем настройки из хранилища (sync или local)
     const settings = await new Promise((resolve) => {
-        chrome.storage.sync.get(null, resolve); // Можно заменить на .local если используешь локально
+        chrome.storage.sync.get(null, resolve);
     });
 
     // 1. Добавляем стили
@@ -31,6 +31,21 @@
         link.dataset.from = 'pulse-extension';
         document.head.appendChild(link);
     }
+
+    // fixme от сюда нет доступа к popup чтобы понять какие настройки являются расширенными
+    // const advancedSettings = await new Promise((resolve) => {
+    //     // console.log(chrome.storage.local.get(null, resolve))
+    //     chrome.storage.local.get(null, (settings) => {
+    //         resolve(settings.advancedSettings ?? false)
+    //     })
+    // });
+    //
+    // if (!advancedSettings) {
+    //     console.log(document.querySelectorAll('.advancedSettings'))
+    //     document.querySelectorAll('.advancedSettings').forEach((item) => {
+    //         console.log(item)
+    //     });
+    // }
 
     window.PULSE_EXTENSION_SETTINGS = JSON.stringify(settings);
 

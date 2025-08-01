@@ -13,25 +13,27 @@
         <!--            <script src="popup.js"></script>-->
         <!--        </div>-->
 
-        <div id="reloadNotice">
-            Настройки изменены. <button id="applyBtn">Перезагрузить для применения</button>
-        </div>
-
         <div id="container">
-            <div id="addPermissions">
-                <div class="title-block">Настройка прав</div>
-                <div class="list">
-                    <div class="block">
-                        <label for="perProject">Добавление ссылок на Git</label>
-                        <input id="perProject" type="checkbox"/>
-                    </div>
-                    <div class="block">
-                        <label for="perPulse">Шестеренка (создание тегов)</label>
-                        <input id="perPulse" type="checkbox"/>
-                    </div>
-                    <div class="block">
-                        <label for="perTask">Отображать скрытые поля в задачах</label>
-                        <input id="perTask" type="checkbox"/>
+            <div id="reloadNotice">
+                Настройки изменены. <button id="applyBtn">Перезагрузить для применения</button>
+            </div>
+
+            <div id="settings">
+                <div>
+                    <div class="title-block">Настройка прав</div>
+                    <div class="list">
+                        <div class="block">
+                            <label for="perProject">Добавление ссылок на Git</label>
+                            <input id="perProject" type="checkbox"/>
+                        </div>
+                        <div class="block">
+                            <label for="perPulse">Шестеренка (создание тегов)</label>
+                            <input id="perPulse" type="checkbox"/>
+                        </div>
+                        <div class="block">
+                            <label for="perTask">Отображать скрытые поля в задачах</label>
+                            <input id="perTask" type="checkbox"/>
+                        </div>
                     </div>
                 </div>
 
@@ -46,6 +48,18 @@
                         <input id="changeCalendar" type="checkbox"/>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <div id="info">
+            <img src="../icons/48.png" alt="Pulse Fixes" id="infoBtn">
+            <div>
+                <p>
+                    <span id="ext-name"> </span>
+                </p>
+                <p>
+                    Версия <span id="ext-version"> </span>
+                </p>
             </div>
         </div>
 

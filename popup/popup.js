@@ -1,13 +1,54 @@
 let settings = null
 
 const load = async function () {
+    window.removeEventListener("load", load, false);
+
     const reloadNotice = document.getElementById('reloadNotice');
-    const permissionsBlock = document.getElementById('addPermissions');
+    const permissionsBlock = document.getElementById('settings');
     document.getElementById('applyBtn').addEventListener('click', () => {
         getCurrentTab(tab => {
             chrome.tabs.reload(tab.id);
             window.close(); // Закрываем popup
         });
+    });
+
+    const manifest = chrome.runtime.getManifest();
+
+    document.getElementById('ext-name').textContent = manifest.name;
+    document.getElementById('ext-version').textContent = manifest.version;
+
+    // Обрабатываем 10 кликов по картинке для показа настроек прав
+    chrome.storage.local.get('advancedSettings', (settings) => {
+        if (!!settings.advancedSettings) {
+            showAdvancedSettings()
+        } else {
+            const callback = () => {
+                let count = 0;
+                let timer;
+                return () => {
+                    console.log(count)
+                    if (count < 0) {
+                        return;
+                    }
+                    try {
+                        clearTimeout(timer)
+                    } catch (e) {}
+                    count++
+                    if (count < 10) {
+                        timer = setTimeout(() => {
+                            count = 0;
+                        }, 1000)
+                    } else {
+                        chrome.storage.local.set({advancedSettings: true})
+                        showAdvancedSettings()
+                        clearTimeout(timer)
+                        count = -1
+                    }
+                }
+            }
+
+            document.getElementById('infoBtn').addEventListener('click', callback());
+        }
     });
 
     // Получаем все чекбоксы внутри блока
@@ -39,24 +80,6 @@ const load = async function () {
         checkForChanges()
     }
 
-    // Навешиваем обработчик на все чекбоксы
-    checkboxes.forEach(input => input.addEventListener('change', checkboxChange));
-
-
-
-
-    const perProject = document.querySelector('#perProject');
-    const perPulse = document.querySelector('#perPulse');
-    /*  */
-    perProject.addEventListener("click", function () {
-        chrome.storage.sync.set({perProject: perProject.checked})
-    });
-    perPulse.addEventListener("click", function () {
-        chrome.storage.sync.set({perPulse: perPulse.checked})
-    });
-    /*  */
-    window.removeEventListener("load", load, false);
-
     chrome.storage.sync.get(null, (stored) => {
         Object.keys(stored).forEach((key) => {
             try {
@@ -66,6 +89,9 @@ const load = async function () {
             }
         })
     })
+
+    // Навешиваем обработчик на все чекбоксы
+    checkboxes.forEach(input => input.addEventListener('change', checkboxChange));
 };
 
 function getCurrentTab(callback) {
@@ -114,6 +140,12 @@ const checkSettings = (tab) => {
             });
         });
     }
+}
+
+function showAdvancedSettings() {
+    document.querySelectorAll('.advancedSettings').forEach((elem) => {
+        elem.classList.add('show')
+    })
 }
 
 window.addEventListener("DOMContentLoaded", load, false);

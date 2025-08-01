@@ -7,7 +7,9 @@ body {
 }
 
 #container {
-    padding: 10px;
+    margin: 10px;
+    position: relative;
+    user-select: none;
 }
 
 .title-block {
@@ -46,7 +48,7 @@ button {
 .show {
     display: block !important;
 
-    & + #container {
+    & + #settings {
         padding-bottom: 60px;
     }
 }
@@ -90,4 +92,27 @@ label {
     justify-content: space-between;
     width: 100%;
     text-align: left;
+}
+
+#info {
+    display: flex;
+    margin: 10px;
+    justify-content: center;
+    cursor: default;
+
+    & > div {
+        display: flex;
+        flex-direction: column;
+        margin-left: 10px;
+        text-align: start;
+        justify-content: center;
+
+        & > p {
+            margin: 0;
+        }
+    }
+}
+
+.advancedSettings {
+    display: none;
 }
