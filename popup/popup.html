@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ru">
+    <head>
+        <title>Настройки Pulse Fixes</title>
+        <link rel="stylesheet" type="text/css" href="variables.css"/>
+        <link rel="stylesheet" type="text/css" href="popup.css"/>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    </head>
+    <body>
+        <!--        <div id="privateSettings">-->
+        <!--            <h1>Настройки приватности</h1>-->
+        <!--            <label for="privateNotice">Приватность</label><input id="privateNotice" type="checkbox" />-->
+        <!--            <script src="popup.js"></script>-->
+        <!--        </div>-->
+
+        <div id="reloadNotice">
+            Настройки изменены. <button id="applyBtn">Применить</button>
+        </div>
+
+        <div id="container">
+            <div id="addPermissions">
+                <div class="title-block">Настройка прав</div>
+                <div class="list">
+                    <div class="block">
+                        <label for="perProject">Добавление ссылок на Git</label>
+                        <input id="perProject" type="checkbox"/>
+                    </div>
+                    <div class="block">
+                        <label for="perPulse">Шестеренка (создание тегов)</label>
+                        <input id="perPulse" type="checkbox"/>
+                    </div>
+                    <div class="block">
+                        <label for="perTask">Отображать скрытые поля в задачах</label>
+                        <input id="perTask" type="checkbox"/>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script src="popup.js"></script>
+    </body>
+</html>

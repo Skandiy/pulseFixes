@@ -1,5 +1,6 @@
 {
   "scripts": [
+    "scripts/loadSettings.js",
     "scripts/rules.js",
     "scripts/darkTheme.js"
   ],

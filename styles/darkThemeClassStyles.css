@@ -12,15 +12,12 @@
     }
 
     .theme--light.v-application .text--primary {
-        color: #fff!important
+        color: #fff !important
     }
 
-    .theme--light.v-application .text--secondary {
-        color: #ffffffb3!important
-    }
-
-    .theme--light.v-application .text--disabled {
-        color: #ffffff80!important
+    .theme--light.v-application .text--secondary,.theme--light.v-application .text--disabled {
+        color: #ffffffb3 !important
+        /*  color: #ffffff80;  */
     }
 
     .theme--light.v-alert .v-alert--prominent .v-alert__icon:after {
@@ -45,11 +42,12 @@
     }
 
     .theme--light.v-bottom-navigation .v-btn:not(.v-btn--active) {
-        color: #ffffffb3!important
+        color: #ffffffb3 !important
     }
 
     .theme--light.v-breadcrumbs .v-breadcrumbs__divider,.theme--light.v-breadcrumbs .v-breadcrumbs__item--disabled {
         color: #ffffff80
+        /*  color: #ffffff80;  */
     }
 
     .theme--light.v-counter {
@@ -71,6 +69,7 @@
 
     .theme--light.v-color-picker .v-color-picker__dot,.theme--light.v-color-picker .v-color-picker__color {
         background-color: #ffffff1f
+        /*  background-color: #ffffff1f;  */
     }
 
     .theme--light.v-btn-toggle:not(.v-btn-toggle--group) {
@@ -79,7 +78,7 @@
     }
 
     .theme--light.v-btn-toggle:not(.v-btn-toggle--group) .v-btn.v-btn {
-        border-color: #ffffff1f!important
+        border-color: #ffffff1f !important
     }
 
     .theme--light.v-btn-toggle:not(.v-btn-toggle--group) .v-btn.v-btn:focus:not(:active) {
@@ -114,6 +113,7 @@
 
     .theme--light.v-calendar-daily .v-calendar-daily_head-day.v-past .v-calendar-daily_head-weekday,.theme--light.v-calendar-daily .v-calendar-daily_head-day.v-past .v-calendar-daily_head-day-label {
         color: #ffffff80
+        /*  color: #ffffff80;  */
     }
 
     .theme--light.v-calendar-daily .v-calendar-daily__intervals-body {
@@ -134,7 +134,7 @@
     }
 
     .theme--light.v-calendar-daily .v-calendar-daily__day-interval:first-child {
-        border-top: none!important
+        border-top: none !important
     }
 
     .theme--light.v-calendar-daily .v-calendar-daily__interval:after {
@@ -146,11 +146,13 @@
     }
 
     .theme--light.v-btn.v-btn--disabled,.theme--light.v-btn.v-btn--disabled .v-icon,.theme--light.v-btn.v-btn--disabled .v-btn__loading {
-        color: #ffffff4d!important
+        color: #ffffff4d !important
+        /*  color: #ffffff4d;  */
+        /*  color: #ffffff4d;  */
     }
 
     .theme--light.v-btn.v-btn--disabled.v-btn--has-bg {
-        background-color: #ffffff1f!important
+        background-color: #ffffff1f !important
     }
 
     .theme--light.v-btn.v-btn--has-bg {
@@ -175,6 +177,7 @@
 
     .theme--light.v-btn--active:hover:before,.theme--light.v-btn--active:before {
         opacity: .18
+        /*  opacity: .18;  */
     }
 
     .theme--light.v-btn--active:focus:before {
@@ -187,6 +190,7 @@
 
     .theme--light.v-small-dialog__menu-content,.theme--light.v-small-dialog__actions {
         background: #1e1e1e
+        /*  background: #1e1e1e;  */
     }
 
     .theme--light.v-footer {
@@ -198,12 +202,10 @@
         color: #fff
     }
 
-    .theme--light.v-file-input .v-file-input__text--placeholder {
+    .theme--light.v-file-input .v-file-input__text--placeholder,.theme--light.v-file-input.v-input--is-disabled .v-file-input__text,.theme--light.v-file-input.v-input--is-disabled .v-file-input__text .v-file-input__text--placeholder {
         color: #ffffffb3
-    }
-
-    .theme--light.v-file-input.v-input--is-disabled .v-file-input__text,.theme--light.v-file-input.v-input--is-disabled .v-file-input__text .v-file-input__text--placeholder {
-        color: #ffffff80
+        /*  color: #ffffff80;  */
+        /*  color: #ffffff80;  */
     }
 
     .theme--light.v-data-table tbody tr.v-data-table__selected {
@@ -212,6 +214,7 @@
 
     .theme--light.v-data-table .v-row-group__header,.theme--light.v-data-table .v-row-group__summary {
         background: #616161
+        /*  background: #616161;  */
     }
 
     .theme--light.v-data-table .v-data-footer {
@@ -224,30 +227,39 @@
 
     .theme--light.v-input,.theme--light.v-input input,.theme--light.v-input textarea {
         color: #fff
+        /*  color: #fff;  */
+        /*  color: #fff;  */
     }
 
     .theme--light.v-input input::-webkit-input-placeholder,.theme--light.v-input textarea::-webkit-input-placeholder {
         color: #ffffff80
+        /*  color: #ffffff80;  */
     }
 
     .theme--light.v-input input::-moz-placeholder,.theme--light.v-input textarea::-moz-placeholder {
         color: #ffffff80
+        /*  color: #ffffff80;  */
     }
 
     .theme--light.v-input input:-ms-input-placeholder,.theme--light.v-input textarea:-ms-input-placeholder {
         color: #ffffff80
+        /*  color: #ffffff80;  */
     }
 
     .theme--light.v-input input::-ms-input-placeholder,.theme--light.v-input textarea::-ms-input-placeholder {
         color: #ffffff80
+        /*  color: #ffffff80;  */
     }
 
     .theme--light.v-input input::placeholder,.theme--light.v-input textarea::placeholder {
         color: #ffffff80
+        /*  color: #ffffff80;  */
     }
 
     .theme--light.v-input--is-disabled,.theme--light.v-input--is-disabled input,.theme--light.v-input--is-disabled textarea {
         color: #ffffff80
+        /*  color: #ffffff80;  */
+        /*  color: #ffffff80;  */
     }
 
     .theme--light.v-data-table {
@@ -275,10 +287,12 @@
 
     .theme--light.v-data-table>.v-data-table__wrapper>table>tbody>tr:not(:last-child)>td:not(.v-data-table__mobile-row),.theme--light.v-data-table>.v-data-table__wrapper>table>tbody>tr:not(:last-child)>th:not(.v-data-table__mobile-row) {
         border-bottom: thin solid rgba(255,255,255,.12)
+        /*  border-bottom: thin solid rgba(255,255,255,.12);  */
     }
 
     .theme--light.v-data-table>.v-data-table__wrapper>table>tbody>tr:not(:last-child)>td:last-child,.theme--light.v-data-table>.v-data-table__wrapper>table>tbody>tr:not(:last-child)>th:last-child {
         border-bottom: thin solid rgba(255,255,255,.12)
+        /*  border-bottom: thin solid rgba(255,255,255,.12);  */
     }
 
     .theme--light.v-data-table>.v-data-table__wrapper>table>tbody>tr.active {
@@ -291,6 +305,7 @@
 
     .theme--light.v-data-table>.v-data-table__wrapper>table>tfoot>tr>td:not(.v-data-table__mobile-row),.theme--light.v-data-table>.v-data-table__wrapper>table>tfoot>tr>th:not(.v-data-table__mobile-row) {
         border-top: thin solid rgba(255,255,255,.12)
+        /*  border-top: thin solid rgba(255,255,255,.12);  */
     }
 
     .theme--light.v-expansion-panels .v-expansion-panel {
@@ -320,6 +335,7 @@
 
     .theme--light.v-expansion-panels.v-expansion-panels--focusable .v-expansion-panel-header--active:hover:before,.theme--light.v-expansion-panels.v-expansion-panels--focusable .v-expansion-panel-header--active:before {
         opacity: .24
+        /*  opacity: .24;  */
     }
 
     .theme--light.v-expansion-panels.v-expansion-panels--focusable .v-expansion-panel-header--active:focus:before {
@@ -332,10 +348,13 @@
 
     .theme--light.v-calendar-category .v-calendar-category__column,.theme--light.v-calendar-category .v-calendar-category__column-header {
         border-right: #9e9e9e 1px solid
+        /*  border-right: #9e9e9e 1px solid;  */
     }
 
     .theme--light.v-calendar-category .v-calendar-daily__head,.theme--light.v-calendar-category .v-calendar-daily__intervals-head,.theme--light.v-calendar-category .v-calendar-daily__intervals-body {
         background: #303030
+        /*  background: #303030;  */
+        /*  background: #303030;  */
     }
 
     .theme--light.v-calendar-weekly {
@@ -383,12 +402,9 @@
         color: #ffffffb3
     }
 
-    .theme--light.v-label {
+    .theme--light.v-label,.theme--light.v-label--is-disabled {
         color: #ffffffb3
-    }
-
-    .theme--light.v-label--is-disabled {
-        color: #ffffff80
+        /*  color: #ffffff80;  */
     }
 
     .theme--light.v-overlay {
@@ -439,6 +455,7 @@
 
     .theme--light.v-list .v-list-group--active:before,.theme--light.v-list .v-list-group--active:after {
         background: #ffffff1f
+        /*  background: #ffffff1f;  */
     }
 
     .theme--light.v-progress-linear {
@@ -452,6 +469,7 @@
 
     .theme--light.v-card>.v-card__text,.theme--light.v-card>.v-card__subtitle {
         color: #ffffffb3
+        /*  color: #ffffffb3;  */
     }
 
     .theme--light.v-chip {
@@ -473,6 +491,7 @@
 
     .theme--light.v-chip--active:hover:before,.theme--light.v-chip--active:before {
         opacity: .24
+        /*  opacity: .24;  */
     }
 
     .theme--light.v-chip--active:focus:before {
@@ -531,14 +550,19 @@
     }
 
     .theme--light.v-system-bar--lights-out {
-        background-color: #0003!important
+        background-color: #0003 !important
+    }
+
+    .theme--light.v-select .v-select__selections {
+        color: #fff
     }
 
     .theme--light.v-select.v-input--is-disabled .v-select__selections,.theme--light.v-select .v-select__selection--disabled {
         color: #ffffff80
+        /*  color: #ffffff80;  */
     }
 
-    .theme--light.v-select.v-text-field--solo-inverted.v-input--is-focused .v-select__selections {
+    .theme--dark.v-select.v-text-field--solo-inverted.v-input--is-focused .v-select__selections {
         color: #000000de
     }
 
@@ -555,11 +579,11 @@
     }
 
     .theme--light.v-input--switch.v-input--is-disabled:not(.v-input--is-dirty) .v-input--switch__thumb {
-        color: #424242!important
+        color: #424242 !important
     }
 
     .theme--light.v-input--switch.v-input--is-disabled:not(.v-input--is-dirty) .v-input--switch__track {
-        color: #ffffff1a!important
+        color: #ffffff1a !important
     }
 
     .theme--light.v-snack__wrapper {
@@ -568,6 +592,8 @@
 
     .theme--light.v-slider .v-slider__track-background,.theme--light.v-slider .v-slider__track-fill,.theme--light.v-slider .v-slider__thumb {
         background: #fff3
+        /*  background: #fff3;  */
+        /*  background: #fff3;  */
     }
 
     .theme--light.v-stepper {
@@ -580,6 +606,7 @@
 
     .theme--light.v-stepper .v-stepper__step__step,.theme--light.v-stepper .v-stepper__step__step .v-icon {
         color: #fff
+        /*  color: #fff;  */
     }
 
     .theme--light.v-stepper .v-stepper__header .v-divider {
@@ -698,10 +725,31 @@
 
     .theme--light.v-skeleton-loader .v-skeleton-loader__avatar,.theme--light.v-skeleton-loader .v-skeleton-loader__button,.theme--light.v-skeleton-loader .v-skeleton-loader__chip,.theme--light.v-skeleton-loader .v-skeleton-loader__divider,.theme--light.v-skeleton-loader .v-skeleton-loader__heading,.theme--light.v-skeleton-loader .v-skeleton-loader__image,.theme--light.v-skeleton-loader .v-skeleton-loader__text {
         background: #ffffff1f
+        /*  background: #ffffff1f;  */
+        /*  background: #ffffff1f;  */
+        /*  background: #ffffff1f;  */
+        /*  background: #ffffff1f;  */
+        /*  background: #ffffff1f;  */
+        /*  background: #ffffff1f;  */
     }
 
     .theme--light.v-skeleton-loader .v-skeleton-loader__actions,.theme--light.v-skeleton-loader .v-skeleton-loader__article,.theme--light.v-skeleton-loader .v-skeleton-loader__card-heading,.theme--light.v-skeleton-loader .v-skeleton-loader__card-text,.theme--light.v-skeleton-loader .v-skeleton-loader__date-picker,.theme--light.v-skeleton-loader .v-skeleton-loader__list-item,.theme--light.v-skeleton-loader .v-skeleton-loader__list-item-avatar,.theme--light.v-skeleton-loader .v-skeleton-loader__list-item-text,.theme--light.v-skeleton-loader .v-skeleton-loader__list-item-two-line,.theme--light.v-skeleton-loader .v-skeleton-loader__list-item-avatar-two-line,.theme--light.v-skeleton-loader .v-skeleton-loader__list-item-three-line,.theme--light.v-skeleton-loader .v-skeleton-loader__list-item-avatar-three-line,.theme--light.v-skeleton-loader .v-skeleton-loader__table-heading,.theme--light.v-skeleton-loader .v-skeleton-loader__table-thead,.theme--light.v-skeleton-loader .v-skeleton-loader__table-tbody,.theme--light.v-skeleton-loader .v-skeleton-loader__table-tfoot {
         background: #1e1e1e
+        /*  background: #1e1e1e;  */
+        /*  background: #1e1e1e;  */
+        /*  background: #1e1e1e;  */
+        /*  background: #1e1e1e;  */
+        /*  background: #1e1e1e;  */
+        /*  background: #1e1e1e;  */
+        /*  background: #1e1e1e;  */
+        /*  background: #1e1e1e;  */
+        /*  background: #1e1e1e;  */
+        /*  background: #1e1e1e;  */
+        /*  background: #1e1e1e;  */
+        /*  background: #1e1e1e;  */
+        /*  background: #1e1e1e;  */
+        /*  background: #1e1e1e;  */
+        /*  background: #1e1e1e;  */
     }
 
     .theme--light.v-icon {
@@ -713,7 +761,7 @@
     }
 
     .theme--light.v-icon.v-icon.v-icon--disabled {
-        color: #ffffff80!important
+        color: #ffffff80 !important
     }
 
     .theme--light.v-treeview {
@@ -722,22 +770,29 @@
 
     .theme--light.v-treeview--hoverable .v-treeview-node__root:hover:before,.theme--light.v-treeview .v-treeview-node--click>.v-treeview-node__root:hover:before {
         opacity: .08
+        /*  opacity: .08;  */
     }
 
     .theme--light.v-treeview--hoverable .v-treeview-node__root:focus:before,.theme--light.v-treeview .v-treeview-node--click>.v-treeview-node__root:focus:before {
         opacity: .24
+        /*  opacity: .24;  */
     }
 
     .theme--light.v-treeview--hoverable .v-treeview-node__root--active:hover:before,.theme--light.v-treeview--hoverable .v-treeview-node__root--active:before,.theme--light.v-treeview .v-treeview-node--click>.v-treeview-node__root--active:hover:before,.theme--light.v-treeview .v-treeview-node--click>.v-treeview-node__root--active:before {
         opacity: .24
+        /*  opacity: .24;  */
+        /*  opacity: .24;  */
+        /*  opacity: .24;  */
     }
 
     .theme--light.v-treeview--hoverable .v-treeview-node__root--active:focus:before,.theme--light.v-treeview .v-treeview-node--click>.v-treeview-node__root--active:focus:before {
         opacity: .32
+        /*  opacity: .32;  */
     }
 
     .theme--light.v-treeview .v-treeview-node__root.v-treeview-node--active:hover:before,.theme--light.v-treeview .v-treeview-node__root.v-treeview-node--active:before {
         opacity: .24
+        /*  opacity: .24;  */
     }
 
     .theme--light.v-treeview .v-treeview-node__root.v-treeview-node--active:focus:before {
@@ -745,7 +800,7 @@
     }
 
     .theme--light.v-treeview .v-treeview-node--disabled>.v-treeview-node__root>.v-treeview-node__content {
-        color: #ffffff80!important
+        color: #ffffff80 !important
     }
 
     .theme--light.v-timeline:before {
@@ -775,6 +830,7 @@
 
     .theme--light.v-list-item:not(.v-list-item--disabled) .v-list-item__subtitle,.theme--light.v-list-item:not(.v-list-item--disabled) .v-list-item__action-text {
         color: #ffffffb3
+        /*  color: #ffffffb3;  */
     }
 
     .theme--light.v-list-item:hover:before {
@@ -787,6 +843,7 @@
 
     .theme--light.v-list-item--active:hover:before,.theme--light.v-list-item--active:before {
         opacity: .24
+        /*  opacity: .24;  */
     }
 
     .theme--light.v-list-item--active:focus:before {
@@ -803,6 +860,9 @@
 
     .theme--light.v-tabs>.v-tabs-bar .v-tab:not(.v-tab--active),.theme--light.v-tabs>.v-tabs-bar .v-tab:not(.v-tab--active)>.v-icon,.theme--light.v-tabs>.v-tabs-bar .v-tab:not(.v-tab--active)>.v-btn,.theme--light.v-tabs>.v-tabs-bar .v-tab--disabled {
         color: #fff9
+        /*  color: #fff9;  */
+        /*  color: #fff9;  */
+        /*  color: #fff9;  */
     }
 
     .theme--light.v-tabs .v-tab:hover:before {
@@ -815,6 +875,7 @@
 
     .theme--light.v-tabs .v-tab--active:hover:before,.theme--light.v-tabs .v-tab--active:before {
         opacity: .24
+        /*  opacity: .24;  */
     }
 
     .theme--light.v-tabs .v-tab--active:focus:before {
@@ -826,7 +887,7 @@
     }
 
     .theme--light.v-calendar-events .v-event-timed {
-        border: 1px solid!important
+        border: 1px solid !important
     }
 
     .theme--light.v-calendar-events .v-event-more {
@@ -851,6 +912,8 @@
 
     .theme--light.v-data-table .v-data-table-header th.sortable:hover,.theme--light.v-data-table .v-data-table-header th.sortable.active,.theme--light.v-data-table .v-data-table-header th.sortable.active .v-data-table-header__icon {
         color: #fff
+        /*  color: #fff;  */
+        /*  color: #fff;  */
     }
 
     .theme--light.v-data-table .v-data-table-header__sort-badge {
@@ -862,7 +925,11 @@
         background: #616161
     }
 
-    .theme--light.v-time-picker-clock .v-time-picker-clock__item--disabled,.theme--light.v-time-picker-clock .v-time-picker-clock__item--disabled.v-time-picker-clock__item--active {
+    .theme--light.v-time-picker-clock .v-time-picker-clock__item--disabled {
+        color: #ffffff4d
+    }
+
+    .theme--light.v-time-picker-clock .v-time-picker-clock__item--disabled.v-time-picker-clock__item--active {
         color: #ffffff4d
     }
 
@@ -880,6 +947,7 @@
 
     .theme--light.v-date-picker-table th,.theme--light.v-date-picker-table .v-date-picker-table--date__week {
         color: #ffffff80
+        /*  color: #ffffff80;  */
     }
 
     .theme--light.v-application code {
@@ -892,7 +960,10 @@
         color: #fff
     }
 
-    .theme--light .stack-badge--bordered .v-badge__badge:after {
+    .theme--light .v-tabs-items {
+    }
+
+    .theme--dark .stack-badge--bordered .v-badge__badge:after {
         border-color: var(--v-stack-base)!important
     }
 

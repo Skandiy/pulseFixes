@@ -4,7 +4,7 @@
 (async () => {
     const modulesJsonUrl = chrome.runtime.getURL('modules.json');
     const response = await fetch(modulesJsonUrl);
-    const { scripts = [], styles = [] } = await response.json();
+    const {scripts = [], styles = []} = await response.json();
 
     // 1. Добавляем стили
     for (const path of styles) {
@@ -17,7 +17,44 @@
         document.head.appendChild(link);
     }
 
-    // 2. Вставляем inline-скрипты
+    // 2. Загружаем настройки из хранилища (sync или local)
+    const settings = await new Promise((resolve) => {
+        chrome.storage.sync.get(null, resolve); // Можно заменить на .local если используешь локально
+    });
+
+    window.PULSE_EXTENSION_SETTINGS = JSON.stringify(settings);
+
+    // Обработчик запроса от popup.js
+    chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+        if (msg?.type === 'GET_PULSE_EXTENSION_SETTINGS') {
+            sendResponse(window.PULSE_EXTENSION_SETTINGS);
+        }
+    });
+
+    // 3. Создаем inline-скрипт, который диспатчит событие
+    const script = document.createElement('script');
+    script.textContent = `
+    (function() {
+      window.PULSE_EXTENSION_SETTINGS = ${JSON.stringify(settings)};
+      const event = new CustomEvent('PulseExtensionSettingsLoaded', {
+        detail: window.PULSE_EXTENSION_SETTINGS
+      });
+      
+      window.dispatchEvent(event);
+    })();
+  `;
+    document.documentElement.appendChild(script);
+
+    chrome.storage.sync.get(null, (currentSettings) => {
+        // При загрузке страницы отправляем настройки в background
+        chrome.runtime.sendMessage({
+            type: 'PageLoadedSettings',
+            payload: currentSettings
+        });
+    });
+
+
+    // 4. Вставляем inline-скрипты из modules.json
     for (const path of scripts) {
         try {
             const scriptText = await fetch(chrome.runtime.getURL(path)).then(r => r.text());
