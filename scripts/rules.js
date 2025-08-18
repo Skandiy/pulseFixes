@@ -55,7 +55,7 @@
                 if (!!parsed.id && parsed.payload && parsed.payload.data && parsed.payload.data.userMessages && parsed.payload.data.userMessages.messages) {
                     for (const message of parsed.payload.data.userMessages.messages) {
                         try {
-                            showLocalNotification(message.payload.title, message.payload.subtitle);
+                            showLocalNotification(message.payload.id, message.payload.title, message.payload.subtitle);
                         } catch (err) {
                             console.error(`Не удалось показать уведомление`);
                         }
