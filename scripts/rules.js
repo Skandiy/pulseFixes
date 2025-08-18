@@ -46,38 +46,54 @@
                     });
                 }
 
+                // Отредактировать даты отпуска
+                if (parsed.tasks && parsed.tasks[0] && parsed.tasks[0].result === 2) {
+                    parsed.tasks[0].result = 1;
+                }
+
+                // Ловим уведомления и показываем push
+                if (!!parsed.id && parsed.payload && parsed.payload.data && parsed.payload.data.userMessages && parsed.payload.data.userMessages.messages) {
+                    for (const message of parsed.payload.data.userMessages.messages) {
+                        try {
+                            showLocalNotification(message.payload.title, message.payload.subtitle);
+                        } catch (err) {
+                            console.error(`Не удалось показать уведомление`);
+                        }
+                    }
+                }
+
                 return parsed;
             };
             let customStringify = function (arg, replacer, space) {
 
                 // Получить ретроспективу по другому сотруднику.
                 // P.S. в фильтрах все равно будет отображаться авторизованный пользователь, но данные будут по указанному
-                const userId = 1730;
-                const enable = false;
-
-                if (arg?.tasks?.[0]?.objectName === 'Ретроспектива.Сотрудники' && enable) {
-                    // if (arg?.tasks?.[0]?.methodName == 'ПолучитьПраваНаРетроспективу') {
-                    //     arg.tasks[0].params['сотрудник'] = 180
-                    // }
-
-                    if (arg?.tasks?.[0]?.methodName === 'ПолучитьЭффективность') {
-                        let tmp = _parse(arg.tasks[0].params['фильтр']['сотрудник'])
-                        tmp.value = userId
-                        arg.tasks[0].params['фильтр']['сотрудник'] = _stringify(tmp)
-                    }
-
-                    if (arg?.tasks?.[0]?.methodName === 'ПолучитьТрудозатраты') {
-                        let tmp = _parse(arg.tasks[0].params['фильтр']['сотрудник'])
-                        tmp.value = userId
-                        arg.tasks[0].params['фильтр']['сотрудник'] = _stringify(tmp)
-                    }
-
-                    if (arg?.tasks?.[0]?.methodName === '"ПолучитьАналитикуПоТрекерам"') {
-                        let tmp = _parse(arg.tasks[0].params['фильтр']['сотрудник'])
-                        tmp.value = userId
-                        arg.tasks[0].params['фильтр']['сотрудник'] = _stringify(tmp)
-                    }
-                }
+                // const userId = 1730;
+                // const enable = false;
+                //
+                // if (arg?.tasks?.[0]?.objectName === 'Ретроспектива.Сотрудники' && enable) {
+                //     // if (arg?.tasks?.[0]?.methodName == 'ПолучитьПраваНаРетроспективу') {
+                //     //     arg.tasks[0].params['сотрудник'] = 180
+                //     // }
+                //
+                //     if (arg?.tasks?.[0]?.methodName === 'ПолучитьЭффективность') {
+                //         let tmp = _parse(arg.tasks[0].params['фильтр']['сотрудник'])
+                //         tmp.value = userId
+                //         arg.tasks[0].params['фильтр']['сотрудник'] = _stringify(tmp)
+                //     }
+                //
+                //     if (arg?.tasks?.[0]?.methodName === 'ПолучитьТрудозатраты') {
+                //         let tmp = _parse(arg.tasks[0].params['фильтр']['сотрудник'])
+                //         tmp.value = userId
+                //         arg.tasks[0].params['фильтр']['сотрудник'] = _stringify(tmp)
+                //     }
+                //
+                //     if (arg?.tasks?.[0]?.methodName === '"ПолучитьАналитикуПоТрекерам"') {
+                //         let tmp = _parse(arg.tasks[0].params['фильтр']['сотрудник'])
+                //         tmp.value = userId
+                //         arg.tasks[0].params['фильтр']['сотрудник'] = _stringify(tmp)
+                //     }
+                // }
 
                 return _stringify(arg, replacer, space);
             };

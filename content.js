@@ -1,3 +1,16 @@
+// Функция для отправки уведомления в background
+const showNotificationFromContent = (title, text) => {
+    chrome.runtime.sendMessage({
+        type: "show-notification",
+        title: title,
+        message: text
+    }, (response) => {
+        if (response?.status === "ok") {
+
+        }
+    });
+}
+
 /**
  * Загружает и встраивает скрипты и стили, указанные в modules.json
  */
@@ -92,4 +105,11 @@
             console.error(`Не удалось загрузить скрипт ${path}:`, err);
         }
     }
+
+    window.addEventListener("message", (event) => {
+        if (event.source !== window) return; // фильтр, чтобы не ловить чужие события
+        if (event.data.type && event.data.type === "SHOW_NOTIFICATION") {
+            showNotificationFromContent(event.data.title, event.data.text)
+        }
+    });
 })();

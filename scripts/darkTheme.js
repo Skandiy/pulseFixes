@@ -1,4 +1,43 @@
 (() => {
+    const styleProto = CSSStyleDeclaration.prototype;
+
+    // let oneSet = 0;
+    // Оригинальный setProperty
+    const origSetProperty = styleProto.setProperty;
+    styleProto.setProperty = function(name, value, priority) {
+
+        // console.log('Изменение --stack-dashboard_h:');
+        if (name === '--stack-dashboard_h') {
+            // console.log('Изменение --stack-dashboard_h:', value);
+
+            if (this.cssText == '--stack-dashboard_y: 7; --stack-dashboard_h: 13; --stack-dashboard_x: 10; --stack-dashboard_w: 3; --stack-dashboard_min-w: 441.5px; --stack-dashboard_min-h: 613px;') {
+                // console.log('Изменение --stack-dashboard_h:', value);
+                value = '11';
+
+                // oneSet++;
+            }
+
+            if (this.cssText == '--stack-dashboard_y: 7; --stack-dashboard_h: 11; --stack-dashboard_x: 10; --stack-dashboard_w: 3; --stack-dashboard_min-w: 441.5px; --stack-dashboard_min-h: 613px;') {
+                // console.log('Изменение --stack-dashboard_h:', value);
+                value = '11';
+
+                // oneSet++;
+            }
+
+            // if (oneSet <= 1) {
+                // console.log('Изменение ', oneSet);
+                return origSetProperty.call(this, name, value, priority);
+            // }
+
+        } else {
+            return origSetProperty.call(this, name, value, priority);
+        }
+    };
+
+
+
+
+
     if (document.readyState === 'complete') {
         _();
     } else {
