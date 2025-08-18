@@ -26,7 +26,6 @@ const load = async function () {
                 let count = 0;
                 let timer;
                 return () => {
-                    console.log(count)
                     if (count < 0) {
                         return;
                     }
@@ -63,7 +62,6 @@ const load = async function () {
             return input.checked !== (settings[key] ?? false);
         });
 
-        // reloadNotice.style.display = changed ? 'block' : 'none';
         reloadNotice.classList.toggle('show', changed);
         return changed;
     }
@@ -118,7 +116,8 @@ const checkSettings = (tab) => {
     if (settings != null) {
         // Получаем настройки из chrome.storage.sync
         chrome.storage.sync.get(null, (storageSettings) => {
-            if (!deepEqual(JSON.stringify(storageSettings), JSON.stringify(settings))) {
+            const {advancedSettings, ...tmp} = settings;
+            if (!deepEqual(JSON.stringify(storageSettings), JSON.stringify(tmp))) {
                 showNotification();
             }
         });
@@ -132,9 +131,11 @@ const checkSettings = (tab) => {
 
             settings = JSON.parse(pageSettings);
 
+            const {advancedSettings, ...tmp} = settings;
+
             // Получаем настройки из chrome.storage.sync
             chrome.storage.sync.get(null, (storageSettings) => {
-                if (!deepEqual(JSON.stringify(storageSettings), pageSettings)) {
+                if (!deepEqual(JSON.stringify(storageSettings), JSON.stringify(tmp))) {
                     showNotification();
                 }
             });

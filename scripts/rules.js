@@ -7,52 +7,54 @@
             let customParse = function (arg) {
                 let parsed = _parse(arg);
 
-                // Выдача глобальных прав права
-                if (parsed.data && parsed.data.authentication && parsed.data.authentication.frontendPermissionsForActiveUser) {
-                    parsed.data.authentication.frontendPermissionsForActiveUser.map((perm) => {
-                        if (settings.perPulse) {
-                            perm.option = "ALLOWED";
-                        } else {
-                            // Права на редактирование проекта
-                            if (settings.perProject && perm.name === 'pulse/projects/:id') {
+                if (settings.advancedSettings) {
+                    // Выдача глобальных прав права
+                    if (parsed.data && parsed.data.authentication && parsed.data.authentication.frontendPermissionsForActiveUser) {
+                        parsed.data.authentication.frontendPermissionsForActiveUser.map((perm) => {
+                            if (settings.perPulse) {
                                 perm.option = "ALLOWED";
+                            } else {
+                                // Права на редактирование проекта
+                                if (settings.perProject && perm.name === 'pulse/projects/:id') {
+                                    perm.option = "ALLOWED";
+                                }
+                                // Права на ретроспективу сотрудников
+                                if (perm.name === 'pulse/analytics/retrospective/employees.*') {
+                                    perm.option = "ALLOWED";
+                                }
                             }
-                            // Права на ретроспективу сотрудников
-                            if (perm.name === 'pulse/analytics/retrospective/employees.*') {
-                                perm.option = "ALLOWED";
+                            return perm
+                        });
+                    }
+
+                    // Дает права на проекте
+                    if (settings.perProject && parsed.tasks && parsed.tasks[0] && parsed.tasks[0].result && parsed.tasks[0].result['поля'] && parsed.tasks[0].result['поля'].indexOf('праваредактирование') === 33) {
+                        // const index = parsed.tasks[0].result['поля'].indexOf('праваредактирование') > 0;
+                        parsed.tasks[0].result['записи'][0][33] = 1;
+                    }
+
+                    // Показывать все поля в задачах
+                    if (settings.perTask && parsed.tasks && parsed.tasks[0] && parsed.tasks[0].result && parsed.tasks[0].result['поля'] && parsed.tasks[0].result['поля'].indexOf('показывать') >= 0) {
+                        const indRead = parsed.tasks[0].result['поля'].indexOf('показывать');
+                        const indWrite = parsed.tasks[0].result['поля'].indexOf('редактировать');
+
+                        parsed.tasks[0].result['записи'].map((task) => {
+                            if (task[12] !== 'Период выполнения работы') {
+                                task[indRead] = 1;
+                                task[indWrite] = 1;
                             }
-                        }
-                        return perm
-                    });
-                }
+                            return task
+                        });
+                    }
 
-                // Дает права на проекте
-                if (settings.perProject && parsed.tasks && parsed.tasks[0] && parsed.tasks[0].result && parsed.tasks[0].result['поля'] && parsed.tasks[0].result['поля'].indexOf('праваредактирование') === 33) {
-                    // const index = parsed.tasks[0].result['поля'].indexOf('праваредактирование') > 0;
-                    parsed.tasks[0].result['записи'][0][33] = 1;
-                }
-
-                // Показывать все поля в задачах
-                if (settings.perTask && parsed.tasks && parsed.tasks[0] && parsed.tasks[0].result && parsed.tasks[0].result['поля'] && parsed.tasks[0].result['поля'].indexOf('показывать') >= 0) {
-                    const indRead = parsed.tasks[0].result['поля'].indexOf('показывать');
-                    const indWrite = parsed.tasks[0].result['поля'].indexOf('редактировать');
-
-                    parsed.tasks[0].result['записи'].map((task) => {
-                        if (task[12] !== 'Период выполнения работы') {
-                            task[indRead] = 1;
-                            task[indWrite] = 1;
-                        }
-                        return task
-                    });
-                }
-
-                // Отредактировать даты отпуска
-                if (parsed.tasks && parsed.tasks[0] && parsed.tasks[0].result === 2) {
-                    parsed.tasks[0].result = 1;
+                    // Отредактировать даты отпуска
+                    if (parsed.tasks && parsed.tasks[0] && parsed.tasks[0].result === 2) {
+                        parsed.tasks[0].result = 1;
+                    }
                 }
 
                 // Ловим уведомления и показываем push
-                if (!!parsed.id && parsed.payload && parsed.payload.data && parsed.payload.data.userMessages && parsed.payload.data.userMessages.messages) {
+                if (settings.pushNotificationsEnabled && !!parsed.id && parsed.payload && parsed.payload.data && parsed.payload.data.userMessages && parsed.payload.data.userMessages.messages) {
                     for (const message of parsed.payload.data.userMessages.messages) {
                         try {
                             showLocalNotification(message.payload.id, message.payload.title, message.payload.subtitle);
