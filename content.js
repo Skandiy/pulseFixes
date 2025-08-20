@@ -1,10 +1,15 @@
-// Функция для отправки уведомления в background
-const showNotificationFromContent = (id, title, text) => {
+
+/**
+ * Функция для отправки уведомления в background
+ *
+ * @param id
+ * @param payload
+ */
+const showNotificationFromContent = (id, payload) => {
     chrome.runtime.sendMessage({
         type: "show-notification",
         id: id,
-        title: title,
-        message: text
+        payload: payload
     }, (response) => {
         if (response?.status === "ok") {
 
@@ -99,10 +104,13 @@ const showNotificationFromContent = (id, title, text) => {
         }
     }
 
+    /**
+     * Принимает уведомления из rules.js, а так же может из других мест на странице
+     */
     window.addEventListener("message", (event) => {
         if (event.source !== window) return; // фильтр, чтобы не ловить чужие события
         if (event.data.type && event.data.type === "SHOW_NOTIFICATION") {
-            showNotificationFromContent(event.data.id, event.data.title, event.data.text)
+            showNotificationFromContent(event.data.id, event.data.payload)
         }
     });
 })();

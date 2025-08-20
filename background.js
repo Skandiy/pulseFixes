@@ -1,16 +1,28 @@
 let cacheNotifications = {};
 
-// Слушаем сообщения из content.js или других частей расширения
+/**
+ * Слушаем сообщения из content.js
+ */
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log('addEventListener')
     if (message.type === "show-notification") {
         if (!cacheNotifications[message.id]) {
             chrome.notifications.create({
                 type: "basic",
-                iconUrl: "icons/128.png", // путь к иконке
-                title: message.title || "Уведомление",
-                message: message.message || "Текст уведомления",
-                priority: 2
+                iconUrl: message.payload.avatar || "icons/128.png", // путь к иконке
+                title: message.payload.title || "Уведомление",
+                message: message.payload.subtitle || "Текст уведомления",
+                contextMessage: message.payload.member,
+                priority: 2,
+                requireInteraction: true,
+                buttons: [
+                    {
+                        title: 'btn1',
+                    },
+                    {
+                        title: 'btn2',
+                    }
+                ]
             });
             sendResponse({ status: "ok" });
 
