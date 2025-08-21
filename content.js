@@ -17,6 +17,14 @@ const showNotificationFromContent = (id, payload) => {
     });
 }
 
+function showNotification() {
+    console.log('showNotification')
+    new Notification("Привет из content.js!", {
+        body: "Это уведомление отображается через new Notification()",
+        icon: "https://via.placeholder.com/128" // можно заменить на свою иконку
+    });
+}
+
 /**
  * Загружает и встраивает скрипты и стили, указанные в modules.json
  */
@@ -110,7 +118,25 @@ const showNotificationFromContent = (id, payload) => {
     window.addEventListener("message", (event) => {
         if (event.source !== window) return; // фильтр, чтобы не ловить чужие события
         if (event.data.type && event.data.type === "SHOW_NOTIFICATION") {
+            // уведомление без получения разрешения от пользователя
             showNotificationFromContent(event.data.id, event.data.payload)
+
+            // Уведомление для которого нужно, чтобы пользователь на сайте разрешил уведомления
+            // console.log('Notification.permission', Notification.permission)
+            // // Проверяем разрешение
+            // if (Notification.permission === "granted") {
+            //     showNotification();
+            // } else if (Notification.permission !== "denied") {
+            //     console.log('Notification.requestPermission')
+            //     Notification.requestPermission().then(permission => {
+            //         if (permission === "granted") {
+            //             showNotification();
+            //         }
+            //     }).catch(err => {
+            //         console.log(err)
+            //     });
+            // }
         }
     });
+
 })();
