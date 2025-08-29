@@ -3,13 +3,15 @@
     "scripts/notifications.js",
     "scripts/loadSettings.js",
     "scripts/rules.js",
-    "scripts/darkTheme.js"
+    "scripts/darkTheme.js",
+    "scripts/chat.js"
   ],
   "styles": [
     "styles/darkThemeCustom.css",
     "styles/darkThemeVariables.css",
     "styles/darkThemeVariablesUsed.css",
     "styles/darkThemeClassStyles.css",
+    "styles/chat.css",
     {
       "key": "changeCalendar",
       "value": "styles/calendar.css"

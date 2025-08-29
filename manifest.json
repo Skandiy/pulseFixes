@@ -1,7 +1,7 @@
 {
   "name": "Pulse Fixes",
   "description": "Дополнительные функции для пульса и фиксы багов",
-  "version": "2.2.5",
+  "version": "2.3.0",
   "manifest_version": 2,
   "browser_action": {
     "default_icon": {
@@ -25,7 +25,10 @@
     "activeTab",
     "scripting",
     "storage",
-    "https://pulse.stack-it.ru/*"
+    "https://pulse.stack-it.ru/*",
+    "webRequest",
+    "webRequestBlocking",
+    "*://chat.stack-it.ru/*"
   ],
   "background": {
     "scripts": ["background.js"],

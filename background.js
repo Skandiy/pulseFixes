@@ -121,3 +121,23 @@ chrome.notifications.onClosed.addListener((notificationId, byUser) => {
         delete notifMeta[notificationId];
     }
 });
+
+
+
+chrome.webRequest.onHeadersReceived.addListener(
+    function (details) {
+        let headers = details.responseHeaders.filter(
+            (header) => header.name.toLowerCase() !== "content-security-policy"
+        );
+
+        // Подставляем свой CSP (или просто убираем полностью)
+        headers.push({
+            name: "Content-Security-Policy",
+            value: "frame-ancestors *;" // либо 'self' https://ваш-домен.ru
+        });
+
+        return { responseHeaders: headers };
+    },
+    { urls: ["*://chat.stack-it.ru/*"] },
+    ["blocking", "responseHeaders"]
+);
