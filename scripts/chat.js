@@ -6,36 +6,72 @@
     div.id = 'pulseFixesChat';
     div.style.maxWidth = "1800px"; // максимальная
     div.style.minWidth = "400px"; // минимальная
-    div.style.width = "500px";
-    div.style.transform = "translateX(500px)";
+    div.style.width = (localStorage.getItem('PULSE_FIXES_CHAT_WIDTH') || 500) + "px";
+    div.style.transform = "translateX("+div.style.width+")";
     div.append(iframe);
 
     // Хэндл для ресайза — по сути сам бордер
+    const resizerHover = document.createElement("div");
+    resizerHover.id = "pulseFixesChat-resizerHover";
+    div.append(resizerHover);
+
     const resizer = document.createElement("div");
     resizer.id = "pulseFixesChat-resizer";
-    div.append(resizer);
+    resizerHover.append(resizer);
+
+    const reboundWrapper = document.createElement("div");
+    reboundWrapper.id = "pulseFixesChat-reboundWrapper";
+    resizerHover.append(reboundWrapper);
+
+    const rebound = document.createElement("div");
+    rebound.id = "pulseFixesChat-rebound";
+    rebound.innerHTML = "/<br />\\";
+    reboundWrapper.append(rebound);
 
     document.querySelector('body').append(div);
 
     // === resize logic ===
     let isResizing = false;
-    let opened = false;
+    let opened = localStorage.getItem('PULSE_FIXES_CHAT_OPENED') === '1';
     let currentSize = div.style.width.replace(/\D/g, '');
     let timeout = null;
+    let leftSide = localStorage.getItem('PULSE_FIXES_CHAT_LEFTSIDE') === '1';
 
-    div.addEventListener("mousedown", (e) => {
+    resizer.addEventListener("mousedown", (e) => {
         e.preventDefault();
         isResizing = true;
         document.body.style.userSelect = "none";
         iframe.style.pointerEvents = "none";
         iframe.style.display = "none";
         document.body.style.pointerEvents = "none";
+        if (leftSide) {
+            rebound.setAttribute('style', 'right: 20px !important');
+        } else {
+            rebound.setAttribute('style', 'left: 20px !important');
+        }
         document.addEventListener("mousemove", moving);
+    });
+
+    rebound.addEventListener("click", (e) => {
+        e.preventDefault();
+        if (opened) {
+            toggleLeftSide(!leftSide);
+        } else {
+            toggleChat()
+        }
     });
 
     const moving = (e) => {
         if (!isResizing) return;
-        const newWidth = window.innerWidth - e.clientX;
+
+        let newWidth;
+
+        if (leftSide) {
+            newWidth = e.clientX;
+        } else {
+            newWidth = window.innerWidth - e.clientX;
+        }
+
         if (
             newWidth >= parseInt(div.style.minWidth) &&
             newWidth <= parseInt(div.style.maxWidth)
@@ -49,9 +85,11 @@
             isResizing = false;
             document.body.style.userSelect = "";
             currentSize = div.style.width.replace(/\D/g, '')
+            localStorage.setItem('PULSE_FIXES_CHAT_WIDTH', currentSize)
             iframe.style.pointerEvents = "auto";
             iframe.style.display = "block";
             document.body.style.pointerEvents = "auto";
+            rebound.removeAttribute('style');
             document.removeEventListener("mousemove", moving);
         }
     });
@@ -102,21 +140,30 @@
     function toggleChat() {
         clearTimeout(timeout);
         if (opened) {
-            div.style.transition = "0.25s";
-            div.style.transform = "translateX("+currentSize+"px)";
+            div.style.transition = " transform 0.25s";
+            div.style.transform = "translateX("+ (leftSide ? "-" : "") + currentSize+"px)";
             timeout = setTimeout(() => {
-                div.style.transition = "0s";
+                div.style.transition = "transform  0s";
                 iframe.style.display = "none";
             }, 250);
+            div.classList.remove('pulseFixesChatOpened')
         } else {
             iframe.style.display = "block";
-            div.style.transition = "0.25s";
+            div.style.transition = "transform  0.25s";
             div.style.transform = "translateX(0px)";
             timeout = setTimeout(() => {
-                div.style.transition = "0s";
+                div.style.transition = "transform  0s";
             }, 250);
+            div.classList.add('pulseFixesChatOpened')
         }
         opened = !opened;
+        localStorage.setItem('PULSE_FIXES_CHAT_OPENED', opened ? '1' : '0')
+    }
+
+    function toggleLeftSide(val = false) {
+        div.classList.toggle('leftSide', val);
+        leftSide = val
+        localStorage.setItem('PULSE_FIXES_CHAT_LEFTSIDE', val ? '1' : '0')
     }
 
     // Запускаем наблюдатель
@@ -124,4 +171,8 @@
         childList: true,
         subtree: true
     });
+
+    opened = !opened
+    toggleChat()
+    toggleLeftSide(leftSide)
 })()

@@ -5,18 +5,77 @@
     width: 500px;
     height: calc(100% - 48px);
     z-index: 999999999;
-    border-left: 3px solid var(--v-primary-base);
     background: hsl(from var(--v-primary-darken4) h s l/0.7);
     backdrop-filter: blur(6px);
+    transition: left 1s, right 1s;
 
-    #pulseFixesChat-resizer {
-        position: absolute;
-        left: -5px;
-        top: 0;
-        width: 5px;
+    #pulseFixesChat-resizerHover {
+        width: 26px;
+        left: -22px;
         height: 100%;
-        cursor: col-resize;
-        background: transparent;
+        display: block;
+        top: 0;
+        position: absolute;
+
+        #pulseFixesChat-resizer {
+            position: absolute;
+            left: 20px;
+            top: 0;
+            width: 2px;
+            height: 100%;
+            background: var(--v-primary-base);
+            transition: left 0.25s, right 0.25s, width 0.25s;
+            cursor: col-resize;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        &:hover, &:active, &:focus {
+            #pulseFixesChat-resizer {
+                width: 6px;
+                left: 18px;
+            }
+        }
+
+        #pulseFixesChat-reboundWrapper {
+            overflow: hidden;
+            height: 100%;
+            width: 22px;
+            left: 0;
+            position: absolute;
+            pointer-events: none;
+
+            #pulseFixesChat-rebound {
+                width: 22px;
+                height: 40px;
+                background: var(--v-primary-base);
+                position: absolute;
+                top: calc(100% / 2 - 20px);
+                left: 20px;
+                border-radius: 50px 0 0 50px;
+                cursor: pointer;
+                transition: left 0.25s, right 0.25s, height 0.25s, top 0.25s;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                line-height: 10px;
+                font-weight: 600;
+                overflow: hidden;
+                pointer-events: all;
+            }
+        }
+
+        &:hover {
+            #pulseFixesChat-reboundWrapper {
+                pointer-events: initial;
+                #pulseFixesChat-rebound {
+                    left: 2px;
+                    height: 74px;
+                    top: calc(100% / 2 - 37px);
+                }
+            }
+        }
     }
 
     iframe {
@@ -24,4 +83,122 @@
         height: 100%;
         border: none
     }
+}
+
+.pulseFixesChatOpened {
+    #pulseFixesChat-resizerHover {
+        width: 10px !important;
+        left: -6px !important;
+
+        #pulseFixesChat-resizer {
+            left: 4px !important;
+            width: 2px !important;
+            pointer-events: initial !important;
+        }
+
+        &:hover, &:active, &:focus {
+            #pulseFixesChat-resizer {
+                width: 6px !important;
+                left: 2px !important;
+            }
+        }
+
+        #pulseFixesChat-reboundWrapper {
+            width: 22px !important;
+            left: -16px !important;
+
+            #pulseFixesChat-rebound {
+                width: 22px !important;
+                left: 20px !important;
+            }
+        }
+
+        &:hover {
+            #pulseFixesChat-reboundWrapper {
+                #pulseFixesChat-rebound {
+                    left: 2px !important;
+                }
+            }
+        }
+    }
+}
+
+.leftSide {
+    left: 0 !important;
+    #pulseFixesChat-resizerHover {
+        right: -22px;
+        left: initial !important;
+        #pulseFixesChat-resizer {
+            right: 20px;
+            left: initial !important;
+        }
+
+        &:hover, &:active, &:focus {
+            #pulseFixesChat-resizer {
+                right: 18px;
+                left: initial !important;
+            }
+        }
+
+        #pulseFixesChat-reboundWrapper {
+            right: 0;
+            left: initial !important;
+            #pulseFixesChat-rebound {
+                right: 20px;
+                left: initial !important;
+                transform: rotateY(180deg) !important;
+            }
+        }
+
+        &:hover {
+            #pulseFixesChat-reboundWrapper {
+                #pulseFixesChat-rebound {
+                    right: 2px;
+                    left: initial !important;
+                }
+            }
+        }
+    }
+}
+
+.leftSide.pulseFixesChatOpened {
+    #pulseFixesChat-resizerHover {
+        width: 10px !important;
+        right: -6px !important;
+
+        #pulseFixesChat-resizer {
+            right: 4px !important;
+            width: 2px !important;
+            pointer-events: initial !important;
+        }
+
+        &:hover, &:active, &:focus {
+            #pulseFixesChat-resizer {
+                width: 6px !important;
+                right: 2px !important;
+            }
+        }
+
+        #pulseFixesChat-reboundWrapper {
+            width: 22px !important;
+            right: -16px !important;
+
+            #pulseFixesChat-rebound {
+                width: 22px !important;
+                right: 20px !important;
+            }
+        }
+
+        &:hover {
+            #pulseFixesChat-reboundWrapper {
+                #pulseFixesChat-rebound {
+                    right: 2px !important;
+                }
+            }
+        }
+    }
+}
+
+.v-overlay--active {
+    transform: translateY(48px);
 }

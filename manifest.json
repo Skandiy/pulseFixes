@@ -1,7 +1,7 @@
 {
-  "name": "Pulse Fixes",
-  "description": "Дополнительные функции для пульса и фиксы багов",
-  "version": "2.3.0",
+  "name": "Pulse Plus",
+  "description": "Дополнительные функции для пульса",
+  "version": "2.3.1",
   "manifest_version": 2,
   "browser_action": {
     "default_icon": {
@@ -10,7 +10,7 @@
       "48": "icons/48.png",
       "64": "icons/64.png"
     },
-    "default_title": "Pulse Fixes",
+    "default_title": "Pulse Plus",
     "default_popup": "popup/popup.html"
   },
   "icons": {
