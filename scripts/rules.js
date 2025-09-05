@@ -2,10 +2,16 @@
     const _parse = JSON.parse;
     const _stringify = JSON.stringify;
 
+    let userId = null;
+
     getPulseSettings()
         .then((settings) => {
             let customParse = function (arg) {
                 let parsed = _parse(arg);
+
+                if (parsed.tasks && parsed.tasks?.[0] && parsed.tasks[0].result && parsed.tasks[0].result['пользовательНомерЗаписи']) {
+                    userId = parsed.tasks[0].result['пользовательНомерЗаписи'];
+                }
 
                 if (settings.advancedSettings) {
                     // Выдача глобальных прав права
@@ -64,9 +70,78 @@
                     }
                 }
 
+                // Выделение активной задачи
+                if (settings.selectActiveTask && parsed.tasks && parsed.tasks[1] && parsed.tasks[1].result && parsed.tasks[1].result.sprint && parsed.tasks[1].result['sprint'][0] && parsed.tasks[1].result['sprint'][0]['задачи'] && parsed.tasks[1].result['sprint'][0]['задачи'].length > 0) {
+                    let activeId = null;
+                    const tasks = parsed.tasks[1].result['sprint'][0]['задачи'];
+
+                    tasks.forEach((task) => {
+                        if (task['состояние'] === 0) {
+                            activeId = task['$номерЗаписи'];
+                            markTaskAsActive(activeId)
+                        } else {
+                            markTaskAsUnActive(task['$номерЗаписи'])
+                        }
+                    })
+
+                    let count = 0;
+
+                    // Настраиваем наблюдатель
+                    const observer = new MutationObserver((mutationsList) => {
+                        for (const mutation of mutationsList) {
+                            if (mutation.type === 'childList') {
+                                // Проверяем все добавленные узлы
+                                mutation.addedNodes.forEach(node => {
+                                    try {
+                                        if (node.nodeType === 1 && node.nodeName === 'TR') {
+                                            count++;
+                                            if (+node.id === +activeId) {
+                                                markTaskAsActive(activeId)
+                                            } else {
+                                                markTaskAsUnActive(node.id)
+                                            }
+                                        }
+                                    } catch (e) {
+                                        console.error(e)
+                                    }
+
+                                    if (count === tasks.length) {
+                                        // Останавливаем наблюдение, если блок добавлен
+                                        observer.disconnect();
+                                    }
+                                });
+                            }
+                        }
+                    });
+
+                    // Запускаем наблюдатель
+                    observer.observe(document.body, {
+                        childList: true,
+                        subtree: true
+                    });
+                }
+
                 return parsed;
             };
             let customStringify = function (arg, replacer, space) {
+
+                if (settings?.selectActiveTask && userId !== null) {
+                    const t = {
+                        "objectName": "Бэклог",
+                        "methodName": "ПолучитьЗадачиСпринта",
+                        "params": {
+                            "спринт": 70,
+                            "фильтр": {
+                                "фсотрудник": "{\"value\":\"" + userId + "\",\"fieldType\":5}"
+                            },
+                            "режим": "common"
+                        }
+                    };
+
+                    if (arg?.tasks?.[0]?.objectName === 'МояСтраница.МоиЗадачи') {
+                        arg?.tasks?.push(t);
+                    }
+                }
 
                 // Получить ретроспективу по другому сотруднику.
                 // P.S. в фильтрах все равно будет отображаться авторизованный пользователь, но данные будут по указанному
@@ -108,3 +183,21 @@
             console.error('Не удалось получить настройки:', err);
         });
 })()
+
+
+function markTaskAsActive(activeId) {
+    try {
+        document.getElementById(activeId).classList.add('PULSE_PLUS_active_task')
+
+    } catch (e) {
+        console.error(e)
+    }
+}
+
+function markTaskAsUnActive(activeId) {
+    try {
+        document.getElementById(activeId).classList.remove('PULSE_PLUS_active_task')
+    } catch (e) {
+        console.error(e)
+    }
+}

@@ -1,6 +1,6 @@
 // Дедуп по message.id (как у тебя было) + мета по уведомлению
 const recentByMsgId = Object.create(null);       // messageId -> 1
-const notifMeta      = Object.create(null);       // notificationId -> { tabId, url }
+const notifMeta = Object.create(null);       // notificationId -> { tabId, url }
 
 /**
  * Извлекает путь из subtitle.
@@ -32,7 +32,8 @@ function extractTargetPathFromSubtitle(subtitle) {
             const u = new URL(raw);
             raw = u.pathname + (u.search || '') + (u.hash || '');
         }
-    } catch (_) {}
+    } catch (_) {
+    }
 
     // 4) Гарантируем ведущий слеш
     if (!raw.startsWith('/')) raw = '/' + raw;
@@ -53,7 +54,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Дедуп по message.id на короткое время
     const msgId = message.id ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     if (recentByMsgId[msgId]) {
-        sendResponse?.({ status: 'dup' });
+        sendResponse?.({status: 'dup'});
         return true;
     }
 
@@ -77,8 +78,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         priority: 2,
         requireInteraction: true,
         buttons: [
-            { title: 'Перейти к заявке' },
-            { title: 'Закрыть' }
+            {title: 'Перейти к заявке'},
+            {title: 'Закрыть'}
         ],
         // isClickable: true, // если захочешь обрабатывать клик по телу уведомления
     }, () => {
@@ -90,9 +91,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     });
 
     recentByMsgId[msgId] = 1;
-    setTimeout(() => { delete recentByMsgId[msgId]; }, 10_000);
+    setTimeout(() => {
+        delete recentByMsgId[msgId];
+    }, 10_000);
 
-    sendResponse?.({ status: 'ok' });
+    sendResponse?.({status: 'ok'});
     return true;
 });
 
@@ -104,7 +107,7 @@ chrome.notifications.onButtonClicked.addListener((notificationId, buttonIndex) =
     if (buttonIndex === 0) {
         // Первая кнопка: открыть ссылку в той же вкладке
         if (meta.tabId != null && meta.url) {
-            chrome.tabs.update(meta.tabId, { url: meta.url });
+            chrome.tabs.update(meta.tabId, {url: meta.url});
         }
         chrome.notifications.clear(notificationId);
         delete notifMeta[notificationId];
@@ -123,7 +126,6 @@ chrome.notifications.onClosed.addListener((notificationId, byUser) => {
 });
 
 
-
 chrome.webRequest.onHeadersReceived.addListener(
     function (details) {
         let headers = details.responseHeaders.filter(
@@ -136,8 +138,8 @@ chrome.webRequest.onHeadersReceived.addListener(
             value: "frame-ancestors *;" // либо 'self' https://ваш-домен.ru
         });
 
-        return { responseHeaders: headers };
+        return {responseHeaders: headers};
     },
-    { urls: ["*://chat.stack-it.ru/*"] },
+    {urls: ["*://chat.stack-it.ru/*"]},
     ["blocking", "responseHeaders"]
 );

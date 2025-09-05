@@ -44,4 +44,46 @@
             }
         }
     }
+
+    .stacktable {
+        tbody {
+            td {
+                &:first-child {
+                    border-left: thin solid transparent;
+                }
+                border-top: thin solid transparent;
+                border-bottom: thin solid rgba(255,255,255,.12);
+                &:last-child {
+                    border-right: thin solid transparent;
+                }
+            }
+        }
+    }
+}
+
+.stacktable {
+    tbody {
+        .PULSE_PLUS_active_task {
+            td {
+                &:first-child {
+                    border-left: thin solid var(--v-primary-base) !important;
+                }
+                border-top: thin solid var(--v-primary-base) !important;
+                border-bottom: thin solid var(--v-primary-base) !important;
+                &:last-child {
+                    border-right: thin solid var(--v-primary-base) !important;
+                }
+            }
+        }
+        td {
+            &:first-child {
+                border-left: thin solid transparent;
+            }
+            border-top: thin solid transparent;
+            border-bottom: thin solid rgba(0,0,0,.12);
+            &:last-child {
+                border-right: thin solid transparent;
+            }
+        }
+    }
 }

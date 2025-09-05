@@ -140,7 +140,7 @@
     function toggleChat() {
         clearTimeout(timeout);
         if (opened) {
-            div.style.transition = " transform 0.25s";
+            div.style.transition = "transform 0.25s";
             div.style.transform = "translateX("+ (leftSide ? "-" : "") + currentSize+"px)";
             timeout = setTimeout(() => {
                 div.style.transition = "transform  0s";
