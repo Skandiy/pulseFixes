@@ -1,3 +1,5 @@
+var sprint = null;
+
 (() => {
     const _parse = JSON.parse;
     const _stringify = JSON.stringify;
@@ -11,6 +13,10 @@
 
                 if (parsed.tasks && parsed.tasks?.[0] && parsed.tasks[0].result && parsed.tasks[0].result['пользовательНомерЗаписи']) {
                     userId = parsed.tasks[0].result['пользовательНомерЗаписи'];
+                }
+
+                if (parsed.tasks && parsed.tasks?.[0] && parsed.tasks[0].result && parsed.tasks[0].result[0] && parsed.tasks[0].result[0].byDefault && parsed.tasks[0].result[0].id) {
+                    sprint = parsed.tasks[0].result[0].id;
                 }
 
                 if (settings.advancedSettings) {
@@ -124,21 +130,19 @@
                 return parsed;
             };
             let customStringify = function (arg, replacer, space) {
-
-                if (settings?.selectActiveTask && userId !== null) {
-                    const t = {
-                        "objectName": "Бэклог",
-                        "methodName": "ПолучитьЗадачиСпринта",
-                        "params": {
-                            "спринт": 70,
-                            "фильтр": {
-                                "фсотрудник": "{\"value\":\"" + userId + "\",\"fieldType\":5}"
-                            },
-                            "режим": "common"
-                        }
-                    };
-
+                if (settings?.selectActiveTask && userId !== null && sprint !== null) {
                     if (arg?.tasks?.[0]?.objectName === 'МояСтраница.МоиЗадачи') {
+                        const t = {
+                            "objectName": "Бэклог",
+                            "methodName": "ПолучитьЗадачиСпринта",
+                            "params": {
+                                "спринт": sprint,
+                                "фильтр": {
+                                    "фсотрудник": "{\"value\":\"" + userId + "\",\"fieldType\":5}"
+                                },
+                                "режим": "common"
+                            }
+                        };
                         arg?.tasks?.push(t);
                     }
                 }
