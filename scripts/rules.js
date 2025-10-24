@@ -60,7 +60,7 @@ var sprint = null;
                     }
 
                     // Отредактировать даты отпуска
-                    if (parsed.tasks && parsed.tasks[0] && parsed.tasks[0].result === 2) {
+                    if (parsed.tasks && parsed.tasks[0] && (parsed.tasks[0].result === 2 || parsed.tasks[0].result === 0)) {
                         parsed.tasks[0].result = 1;
                     }
                 }
