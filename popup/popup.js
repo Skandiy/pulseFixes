@@ -90,6 +90,8 @@ const load = async function () {
 
     // Навешиваем обработчик на все чекбоксы
     checkboxes.forEach(input => input.addEventListener('change', checkboxChange));
+
+    permissionsBlock.querySelector('#syncCalendar').addEventListener('click', syncCalendar)
 };
 
 function getCurrentTab(callback) {
@@ -148,5 +150,88 @@ function showAdvancedSettings() {
         elem.classList.add('show')
     })
 }
+
+function syncCalendar() {
+    console.log('Синхронизация календаря');
+    const ics = generateICS({
+        uid: "event-123@example.com",
+        title: "Созвон с командой",
+        description: "Обсуждение задач на спринт",
+        location: "Zoom",
+        start: new Date("2025-01-22T10:00:00Z"),
+        end: new Date("2025-01-22T11:00:00Z"),
+    });
+
+    sendICSToTelegram({
+        botToken: '6814242489:AAGBTeCKjIvaHzGVJlrKej0A2nmwXFafFnU',
+        chatId: -1002062079593,
+        icsContent: ics,
+        filename: "meeting.ics",
+    });
+}
+
+function generateICS({
+                         uid,
+                         title,
+                         description = "",
+                         location = "",
+                         start, // Date
+                         end    // Date
+                     }) {
+    const formatDate = (date) =>
+        date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+
+    return [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//Your Company//Your App//EN",
+        "CALSCALE:GREGORIAN",
+        "BEGIN:VEVENT",
+        `UID:${uid}`,
+        `DTSTAMP:${formatDate(new Date())}`,
+        `DTSTART:${formatDate(start)}`,
+        `DTEND:${formatDate(end)}`,
+        `SUMMARY:${title}`,
+        `DESCRIPTION:${description}`,
+        `LOCATION:${location}`,
+        "END:VEVENT",
+        "END:VCALENDAR",
+    ].join("\r\n");
+}
+
+async function sendICSToTelegram({
+                                     botToken,
+                                     chatId,
+                                     icsContent,
+                                     filename = "event.ics"
+                                 }) {
+    const formData = new FormData();
+
+    formData.append(
+        "document",
+        new Blob([icsContent], { type: "text/calendar;charset=utf-8" }),
+        filename
+    );
+
+    formData.append("chat_id", chatId);
+
+    const response = await fetch(
+        `https://api.telegram.org/bot${botToken}/sendDocument`,
+        {
+            method: "POST",
+            body: formData,
+        }
+    );
+
+    if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Telegram API error: ${text}`);
+    }
+
+    return response.json();
+}
+
+
+
 
 window.addEventListener("DOMContentLoaded", load, false);

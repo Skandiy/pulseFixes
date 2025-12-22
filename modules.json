@@ -4,7 +4,8 @@
     "scripts/loadSettings.js",
     "scripts/rules.js",
     "scripts/darkTheme.js",
-    "scripts/chat.js"
+    "scripts/chat.js",
+    "scripts/mainPage.js"
   ],
   "styles": [
     "styles/darkThemeCustom.css",
