@@ -73,6 +73,26 @@ function showNotification() {
         if (msg?.type === 'GET_PULSE_EXTENSION_SETTINGS') {
             sendResponse(window.PULSE_EXTENSION_SETTINGS);
         }
+
+        if (msg?.type === 'EXECUTE_PAGE_REQUEST') {
+            (async () => {
+                try {
+                    const data = await sendRequest(msg.payload);
+
+                    sendResponse({
+                        ok: true,
+                        data
+                    });
+                } catch (err) {
+                    sendResponse({
+                        ok: false,
+                        error: err.message
+                    });
+                }
+            })();
+
+            return true;
+        }
     });
 
     // 3. Создаем inline-скрипт, который диспатчит событие
@@ -140,3 +160,19 @@ function showNotification() {
     });
 
 })();
+
+function sendRequest(payload) {
+    return new Promise((resolve, reject) => {
+        fetch("https://pulse.stack-it.ru/app/stackgateway/billing/pulse/kvpl", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "s-access-token": JSON.parse(localStorage.getItem('common')).authSystemStore.token_,
+            },
+            body: JSON.stringify(payload)
+        })
+            .then(response => response.json())
+            .then(data => resolve(data))
+            .catch(error => reject(error));
+    })
+}
