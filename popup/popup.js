@@ -250,7 +250,7 @@ async function publicICS(telegramFileId) {
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
             file_id: telegramFileId,
-            user_id: 0,
+            user_id: (await getLocalStorageValue('')).user_id,
             filename: "calendar.ics"
         })
     });
@@ -374,13 +374,45 @@ function buildIcsDescription(comment) {
     return parts.join('\r\n ');
 }
 
+function getLocalStorageValue(key) {
+    return new Promise((resolve) => {
+        try {
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                if (!tabs[0]) resolve(null);
+
+                chrome.tabs.sendMessage(
+                    tabs[0].id,
+                    {
+                        type: 'GET_LOCAL_STORAGE_VALUE',
+                        payload: { key },
+                    },
+                    (response) => {
+                        if (chrome.runtime.lastError) {
+                            console.error('sendMessage error:', chrome.runtime.lastError.message);
+                            resolve(null);
+                        }
+
+                        try {
+                            resolve(JSON.parse(response.data));
+                        } catch (e) {
+                            resolve(null);
+                        }
+                    }
+                );
+            });
+        } catch (e) {
+            resolve(null);
+        }
+    })
+}
+
 /**
  * Получение событий календаря
  */
 function getEvents() {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         try {
-            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
                 if (!tabs[0]) resolve([]);
 
                 const dateStart = new Date("2025-12-01T10:00:00Z");
@@ -399,7 +431,7 @@ function getEvents() {
                                         "датнач": dateStart.toISOString().split('T')[0],
                                         "даткнц": dateEnd.toISOString().split('T')[0],
                                         "фильтр": {
-                                            "сотрудник": "{\"fieldType\":5,\"value\":\"423\"}",
+                                            "сотрудник": "{\"fieldType\":5,\"value\":\"" + (await getLocalStorageValue('')).user_id + "\"}",
                                             "внутренние": "0,1,4",
                                             "внешние": null
                                         }

@@ -93,6 +93,20 @@ function showNotification() {
 
             return true;
         }
+
+        if (msg?.type === 'GET_LOCAL_STORAGE_VALUE') {
+            try {
+                sendResponse({
+                    ok: true,
+                    data: localStorage.getItem(msg.payload.key)
+                });
+            } catch (err) {
+                sendResponse({
+                    ok: false,
+                    data: null
+                });
+            }
+        }
     });
 
     // 3. Создаем inline-скрипт, который диспатчит событие
