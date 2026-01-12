@@ -31,8 +31,10 @@
             bottom: 0 !important;
         }
     }
+}
 
-    & > div > div:nth-child(2) > div > div > .indigo {
+.pulse-fixed-dark-theme {
+    .stack-calendar > div > div:nth-child(2) > div > div > .indigo {
         background-color: #5c6bc0 !important;
         border-color: #5c6bc0 !important;
     }
