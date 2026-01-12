@@ -250,7 +250,7 @@ async function publicICS(telegramFileId) {
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
             file_id: telegramFileId,
-            user_id: (await getLocalStorageValue('')).user_id,
+            user_id: (await getLocalStorageValue('pulse')).userInfoStore.userId_,
             filename: "calendar.ics"
         })
     });
@@ -431,7 +431,7 @@ function getEvents() {
                                         "датнач": dateStart.toISOString().split('T')[0],
                                         "даткнц": dateEnd.toISOString().split('T')[0],
                                         "фильтр": {
-                                            "сотрудник": "{\"fieldType\":5,\"value\":\"" + (await getLocalStorageValue('')).user_id + "\"}",
+                                            "сотрудник": "{\"fieldType\":5,\"value\":\"" + (await getLocalStorageValue('pulse')).userInfoStore.userId_ + "\"}",
                                             "внутренние": "0,1,4",
                                             "внешние": null
                                         }
