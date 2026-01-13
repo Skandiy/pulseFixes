@@ -3,7 +3,7 @@ name: Auto Release Chrome Extension
 on:
   push:
     branches:
-      - main
+      - master
 
 jobs:
   release:
