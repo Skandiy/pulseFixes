@@ -84,7 +84,7 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          source: "pulse-fix.crx,update.xml"
+          source: "update.xml,pulse-fix.crx"
           target: ${{ secrets.EXTENSIONS_PATH }}
 
       - name: Create GitHub Release
