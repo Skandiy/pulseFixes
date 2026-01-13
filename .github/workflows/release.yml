@@ -1,0 +1,94 @@
+name: Auto Release Chrome Extension
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Read version from manifest
+        id: manifest
+        run: |
+          VERSION=$(node -p "require('./manifest.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Get latest release version
+        id: latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          API="https://api.github.com/repos/${{ github.repository }}/releases/latest"
+          STATUS=$(curl -s -o response.json -w "%{http_code}" "$API")
+
+          if [ "$STATUS" != "200" ]; then
+            echo "version=none" >> $GITHUB_OUTPUT
+          else
+            VERSION=$(jq -r '.tag_name' response.json | sed 's/^v//')
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Compare versions
+        id: compare
+        run: |
+          if [ "${{ steps.manifest.outputs.version }}" = "${{ steps.latest.outputs.version }}" ]; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Stop if version not changed
+        if: steps.compare.outputs.changed == 'false'
+        run: |
+          echo "Version not changed, skipping release."
+          exit 0
+
+      - name: Install crx3
+        run: npm install -g crx3
+
+      - name: Restore PEM key
+        run: |
+          echo "${{ secrets.EXTENSION_PEM }}" > extension.pem
+          chmod 600 extension.pem
+
+      - name: Build CRX
+        run: |
+          crx3 pack . \
+            -o pulse-fix.crx \
+            -p extension.pem
+
+      - name: Generate update.xml
+        run: |
+          sed \
+            -e "s/{{VERSION}}/${{ steps.manifest.outputs.version }}/" \
+            -e "s/{{APP_ID}}/${{ secrets.EXTENSION_APP_ID }}/" \
+            update.xml.template > update.xml
+
+      - name: Upload to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          source: "pulse-fix.crx,update.xml"
+          target: ${{ secrets.EXTENSIONS_PATH }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.manifest.outputs.version }}
+          name: Release v${{ steps.manifest.outputs.version }}
+          files: |
+            pulse-fix.crx
+            update.xml
