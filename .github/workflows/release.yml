@@ -59,14 +59,14 @@ jobs:
 
       - name: Restore PEM key
         run: |
-          echo "${{ secrets.EXTENSION_PEM }}" > extension.pem
-          chmod 600 extension.pem
+          echo "${{ secrets.EXTENSION_PEM }}" > pulse-fix.pem
+          chmod 600 pulse-fix.pem
 
       - name: Build CRX
         run: |
           crx3 pack ./../ \
             -o ./../pulse-fix.crx \
-            -p ./../extension.pem
+            -p ./../pulse-fix.pem
 
       - name: Generate update.xml
         run: |
