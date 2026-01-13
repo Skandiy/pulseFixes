@@ -77,12 +77,13 @@ jobs:
           sed \
             -e "s/{{VERSION}}/${{ steps.manifest.outputs.version }}/" \
             -e "s/{{APP_ID}}/${{ secrets.EXTENSION_APP_ID }}/" \
-            update.xml.template > update.xml
+            update.xml.template > dist/update.xml
 
       - name: Check crx3
         run: |
-          ls -lah
-          ls -lah dist || true
+          ls -lah dist
+          test -f dist/pulse-fix.crx
+          test -f dist/update.xml
 
       - name: Upload to server
         uses: appleboy/scp-action@v0.1.7
@@ -90,7 +91,7 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          source: "update.xml,pulse-fix.crx"
+          source: "dist/update.xml,dist/pulse-fix.crx"
           target: ${{ secrets.EXTENSIONS_PATH }}
 
       - name: Create GitHub Release
@@ -99,5 +100,5 @@ jobs:
           tag_name: v${{ steps.manifest.outputs.version }}
           name: Release v${{ steps.manifest.outputs.version }}
           files: |
-            pulse-fix.crx
-            update.xml
+            dist/pulse-fix.crx
+            dist/update.xml
