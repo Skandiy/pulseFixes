@@ -93,6 +93,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           source: "dist/update.xml,dist/pulse-fix.crx"
           target: ${{ secrets.EXTENSIONS_PATH }}
+          strip_components: 1
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
