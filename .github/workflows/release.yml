@@ -1,9 +1,12 @@
-name: Auto Release Chrome Extension
+name: Build & Release Extension
 
 on:
   push:
     branches:
       - master
+
+permissions:
+  contents: write
 
 jobs:
   release:
