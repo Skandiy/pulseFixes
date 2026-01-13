@@ -67,9 +67,10 @@ jobs:
 
       - name: Build CRX
         run: |
-          crx3 pack ./../ \
-            -o ./../pulse-fix.crx \
-            -p ./../pulse-fix.pem
+          mkdir -p dist
+          crx3 pack . \
+            -o dist/pulse-fix.crx \
+            -p pulse-fix.pem
 
       - name: Generate update.xml
         run: |
