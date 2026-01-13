@@ -78,6 +78,11 @@ jobs:
             -e "s/{{APP_ID}}/${{ secrets.EXTENSION_APP_ID }}/" \
             update.xml.template > update.xml
 
+      - name: Check crx3
+        run: |
+          ls -lah
+          ls -lah dist || true
+
       - name: Upload to server
         uses: appleboy/scp-action@v0.1.7
         with:
