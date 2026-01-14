@@ -7,15 +7,12 @@
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     </head>
     <body>
-        <!--        <div id="privateSettings">-->
-        <!--            <h1>Настройки приватности</h1>-->
-        <!--            <label for="privateNotice">Приватность</label><input id="privateNotice" type="checkbox" />-->
-        <!--            <script src="popup.js"></script>-->
-        <!--        </div>-->
-
         <div id="container">
-            <div id="reloadNotice">
-                Настройки изменены. <button id="applyBtn">Перезагрузить для применения</button>
+            <div class="list">
+                <div class="block">
+                    <label for="enableFeatures">Включение расширения</label>
+                    <input id="enableFeatures" type="checkbox"/>
+                </div>
             </div>
 
             <div id="settings">
@@ -68,6 +65,10 @@
                         <a id="calendarIosLink"></a>
                     </div>
                 </div>
+            </div>
+
+            <div id="reloadNotice">
+                Настройки изменены. <button id="applyBtn">Перезагрузить для применения</button>
             </div>
         </div>
 

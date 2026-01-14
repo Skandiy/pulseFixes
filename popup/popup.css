@@ -21,7 +21,7 @@ body {
     margin-top: 10px;
 
     &:first-child {
-        margin-top: 0;
+        /*margin-top: 0;*/
     }
 }
 
@@ -37,12 +37,26 @@ button {
 }
 
 #reloadNotice {
-    display: none;
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 10px;
+    height: 0;
+    overflow: hidden;
+    transition: 0.25s;
+
+    background: var(--v-warning-base);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0 10px;
+    margin-top: 0;
+    color: var(--v-ty-primary-base);
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.showReloadNotice {
+    height: 51px !important;
+    padding: 10px !important;
+    margin-top: 10px !important;
 }
 
 .show {
@@ -118,6 +132,6 @@ label {
     }
 }
 
-.advancedSettings {
+#settings, .advancedSettings {
     display: none;
 }

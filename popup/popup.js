@@ -1,4 +1,5 @@
 let settings = null
+let currentEnabledFeatures = null
 
 const load = async function () {
     window.removeEventListener("load", load, false);
@@ -16,6 +17,39 @@ const load = async function () {
 
     document.getElementById('ext-name').textContent = manifest.name;
     document.getElementById('ext-version').textContent = manifest.version;
+
+    chrome.storage.local.get('enableFeatures', (settings) => {
+        document.querySelector('#enableFeatures').checked = settings.enableFeatures;
+
+        currentEnabledFeatures = !!settings.enableFeatures;
+
+        if (!!settings.enableFeatures) {
+            showSettings()
+        }
+    });
+
+    document.querySelector('#enableFeatures').addEventListener('click', (ev) => {
+        const key = ev.target.id
+        const value = ev.target.checked
+
+        const settings = {};
+        settings[key] = value;
+
+        chrome.storage.local.set(settings)
+
+        if (!!value) {
+            showSettings()
+        } else {
+            hideSettings()
+        }
+
+        if (currentEnabledFeatures !== !!value) {
+            showNotification();
+        } else {
+            hideNotification()
+            checkForChanges()
+        }
+    })
 
     // Обрабатываем 10 кликов по картинке для показа настроек прав
     chrome.storage.local.get('advancedSettings', (settings) => {
@@ -62,7 +96,7 @@ const load = async function () {
             return input.checked !== (settings[key] ?? false);
         });
 
-        reloadNotice.classList.toggle('show', changed);
+        reloadNotice.classList.toggle('showReloadNotice', changed);
         return changed;
     }
 
@@ -106,7 +140,11 @@ function deepEqual(a, b) {
 }
 
 function showNotification() {
-    reloadNotice.classList.toggle('show', true);
+    document.getElementById('reloadNotice').classList.toggle('showReloadNotice', true);
+}
+
+function hideNotification() {
+    document.getElementById('reloadNotice').classList.toggle('showReloadNotice', false);
 }
 
 const checkSettings = (tab) => {
@@ -143,6 +181,14 @@ const checkSettings = (tab) => {
             });
         });
     }
+}
+
+function showSettings() {
+    document.querySelector('#settings').classList.add('show')
+}
+
+function hideSettings() {
+    document.querySelector('#settings').classList.remove('show')
 }
 
 function showAdvancedSettings() {
