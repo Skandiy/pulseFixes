@@ -171,7 +171,7 @@ const checkSettings = (tab) => {
 
             settings = JSON.parse(pageSettings);
 
-            const {advancedSettings, ...tmp} = settings;
+            const {advancedSettings, enableFeatures, ...tmp} = settings;
 
             // Получаем настройки из chrome.storage.sync
             chrome.storage.sync.get(null, (storageSettings) => {
