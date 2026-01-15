@@ -36,7 +36,8 @@
 
   "host_permissions": [
     "https://pulse.stack-it.ru/*",
-    "https://chat.stack-it.ru/*"
+    "https://chat.stack-it.ru/*",
+    "https://chat.sk-serv.ru/*"
   ],
 
   "background": {
@@ -51,16 +52,6 @@
       "run_at": "document_idle"
     }
   ],
-
-  "declarative_net_request": {
-    "rule_resources": [
-      {
-        "id": "headers",
-        "enabled": true,
-        "path": "rules/headers.json"
-      }
-    ]
-  },
 
   "web_accessible_resources": [
     {
