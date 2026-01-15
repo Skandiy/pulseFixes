@@ -1,6 +1,6 @@
 (() => {
     const iframe = document.createElement('iframe');
-    iframe.src = "https://chat.stack-it.ru/stack/";
+    iframe.src = "https://chat.sk-serv.ru:9443/stack/";
 
     const div = document.createElement('div');
     div.id = 'pulseFixesChat';

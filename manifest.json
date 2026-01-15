@@ -1,41 +1,50 @@
 {
   "name": "Pulse Plus",
   "description": "Дополнительные функции для пульса",
-  "version": "2.4.4",
+
+  "version": "3.0.0",
   "update_url": "https://vpn.sk-serv.ru:9443/extensions/pulse-fix/update.xml",
-  "manifest_version": 2,
-  "browser_action": {
+
+  "manifest_version": 3,
+
+  "action": {
+    "default_title": "Pulse Plus",
+    "default_popup": "popup/popup.html",
     "default_icon": {
       "16": "icons/16.png",
       "32": "icons/32.png",
       "48": "icons/48.png",
       "64": "icons/64.png"
-    },
-    "default_title": "Pulse Plus",
-    "default_popup": "popup/popup.html"
+    }
   },
+
   "icons": {
-    "128": "icons/128.png",
     "16": "icons/16.png",
     "32": "icons/32.png",
     "48": "icons/48.png",
-    "64": "icons/64.png"
+    "64": "icons/64.png",
+    "128": "icons/128.png"
   },
+
   "permissions": [
     "notifications",
+    "storage",
     "activeTab",
     "scripting",
-    "storage",
-    "https://pulse.stack-it.ru/*",
-    "webRequest",
-    "webRequestBlocking",
-    "*://chat.stack-it.ru/*"
+    "declarativeNetRequest"
   ],
+
+  "host_permissions": [
+    "https://pulse.stack-it.ru/*",
+    "https://chat.stack-it.ru/*",
+    "https://chat.sk-serv.ru/*"
+  ],
+
   "background": {
-    "scripts": ["background.js"],
-    "persistent": true
+    "service_worker": "background.js",
+    "type": "module"
   },
-  "host_permissions": ["https://pulse.stack-it.ru/*"],
+
   "content_scripts": [
     {
       "matches": ["https://pulse.stack-it.ru/*"],
@@ -43,13 +52,18 @@
       "run_at": "document_idle"
     }
   ],
+
   "web_accessible_resources": [
-    "modules.json",
-    "scripts/*.js",
-    "styles/*.css",
-    "popup/*.html",
-    "popup/*.js",
-    "popup/*.css",
-    "background.js"
+    {
+      "resources": [
+        "modules.json",
+        "scripts/*.js",
+        "styles/*.css",
+        "popup/*.html",
+        "popup/*.js",
+        "popup/*.css"
+      ],
+      "matches": ["<all_urls>"]
+    }
   ]
 }
