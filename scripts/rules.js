@@ -4,6 +4,8 @@ var sprint = null;
     const _parse = JSON.parse;
     const _stringify = JSON.stringify;
 
+    const _originalJson = Response.prototype.json;
+
     let userId = null;
 
     getPulseSettings()
@@ -20,7 +22,7 @@ var sprint = null;
                 }
 
                 if (settings.advancedSettings) {
-                    // Выдача глобальных прав права
+                    // deprecated Выдача глобальных прав права
                     if (parsed.data && parsed.data.authentication && parsed.data.authentication.frontendPermissionsForActiveUser) {
                         parsed.data.authentication.frontendPermissionsForActiveUser.map((perm) => {
                             if (settings.perPulse) {
@@ -37,6 +39,11 @@ var sprint = null;
                             }
                             return perm
                         });
+                    }
+
+                    // deprecated Делает тебя админом
+                    if (parsed.tasks && parsed.tasks[0] && parsed.tasks[0].result && parsed.tasks[0].result['пользовательФИО']) {
+                        parsed.tasks[0].result['супервизор'] = 1;
                     }
 
                     // Дает права на проекте
@@ -179,8 +186,46 @@ var sprint = null;
                 return _stringify(arg, replacer, space);
             };
 
+            let customJson = async function () {
+                const parsed = await _originalJson.call(this);
+
+                // Выдача глобальных прав права
+                if (parsed.principal && parsed.principal.authorities) {
+                    parsed.principal.authorities.map((perm) => {
+                        if (settings.perPulse) {
+                            perm.attributes.options[0] = "ALLOWED";
+                        } else {
+                            // Права на редактирование проекта
+                            if (settings.perProject && perm.name === 'pulse/projects/:id') {
+                                perm.attributes.options[0] = "ALLOWED";
+                            }
+                            // Права на ретроспективу сотрудников
+                            if (perm.name === 'pulse/analytics/retrospective/employees.*') {
+                                perm.attributes.options[0] = "ALLOWED";
+                            }
+                        }
+                        return perm
+                    });
+                }
+
+                // deprecated Делает тебя админом
+                if (parsed.tasks && parsed.tasks[0] && parsed.tasks[0].result && parsed.tasks[0].result['пользовательФИО']) {
+                    parsed.tasks[0].result['супервизор'] = 1;
+                }
+
+                // Делает тебя админом
+                if (parsed.roles) {
+                    parsed.roles.push('ADMIN');
+                }
+
+                // можно изменить результат
+                return parsed;
+            };
+
             JSON.parse = customParse;
             JSON.stringify = customStringify;
+
+            Response.prototype.json = customJson;
 
         })
         .catch((err) => {
