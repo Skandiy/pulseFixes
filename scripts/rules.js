@@ -189,33 +189,30 @@ var sprint = null;
             let customJson = async function () {
                 const parsed = await _originalJson.call(this);
 
-                // Выдача глобальных прав права
-                if (parsed.principal && parsed.principal.authorities) {
-                    parsed.principal.authorities.map((perm) => {
-                        if (settings.perPulse) {
-                            perm.attributes.options[0] = "ALLOWED";
-                        } else {
-                            // Права на редактирование проекта
-                            if (settings.perProject && perm.name === 'pulse/projects/:id') {
+                if (settings.advancedSettings) {
+                    // Выдача глобальных прав права
+                    if (parsed.principal && parsed.principal.authorities) {
+                        parsed.principal.authorities.map((perm) => {
+                            if (settings.perPulse) {
                                 perm.attributes.options[0] = "ALLOWED";
+                            } else {
+                                // Права на редактирование проекта
+                                if (settings.perProject && perm.name === 'pulse/projects/:id') {
+                                    perm.attributes.options[0] = "ALLOWED";
+                                }
+                                // Права на ретроспективу сотрудников
+                                if (perm.name === 'pulse/analytics/retrospective/employees.*') {
+                                    perm.attributes.options[0] = "ALLOWED";
+                                }
                             }
-                            // Права на ретроспективу сотрудников
-                            if (perm.name === 'pulse/analytics/retrospective/employees.*') {
-                                perm.attributes.options[0] = "ALLOWED";
-                            }
-                        }
-                        return perm
-                    });
-                }
+                            return perm
+                        });
+                    }
 
-                // deprecated Делает тебя админом
-                if (parsed.tasks && parsed.tasks[0] && parsed.tasks[0].result && parsed.tasks[0].result['пользовательФИО']) {
-                    parsed.tasks[0].result['супервизор'] = 1;
-                }
-
-                // Делает тебя админом
-                if (parsed.roles) {
-                    parsed.roles.push('ADMIN');
+                    // Делает тебя админом
+                    if (parsed.roles) {
+                        parsed.roles.push('ADMIN');
+                    }
                 }
 
                 // можно изменить результат
