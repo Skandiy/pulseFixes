@@ -2,7 +2,7 @@
   "name": "Pulse Plus",
   "description": "Дополнительные функции для пульса",
 
-  "version": "4.0.0",
+  "version": "4.0.1",
   "update_url": "https://vpn.sk-serv.ru:9443/extensions/pulse-fix/update.xml",
 
   "manifest_version": 3,
@@ -37,7 +37,9 @@
   "host_permissions": [
     "https://pulse.stack-it.ru/*",
     "https://chat.stack-it.ru/*",
-    "https://chat.sk-serv.ru/*"
+    "https://chat.sk-serv.ru/*",
+    "http://127.0.0.1/*",
+    "http://localhost/*"
   ],
 
   "background": {

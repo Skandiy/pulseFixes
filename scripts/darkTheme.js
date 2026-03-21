@@ -62,17 +62,18 @@
                             try {
                                 if (node.nodeType === 1 && node.matches(selector)) {
 
+                                    const segment = document.querySelectorAll('header .v-toolbar__content > div > div > div:last-of-type')[0];
                                     // Блок найден, добавляем новый элемент
-                                    const referenceNode = [...document.querySelectorAll('header .v-toolbar__content > div > div > div:last-of-type')[0].querySelectorAll('.row > div')].at(-3)
+                                    const referenceNode = [...segment.querySelectorAll('.row > div')].at(-3)
 
-                                    const btn = document.querySelectorAll('header .v-toolbar__content > div > div > div:last-of-type')[0].querySelector('.row > div').cloneNode(true);
+                                    const btn = segment.querySelector('.row > div').cloneNode(true);
 
                                     btn.querySelector('.v-icon').innerHTML = svg
                                     btn.querySelector('button').title = 'Сменить тему оформления'
 
                                     btn.querySelector('button').addEventListener('click', themeChange)
 
-                                    referenceNode.parentNode.insertBefore(btn, referenceNode.nextSibling);
+                                    referenceNode.parentNode.insertBefore(btn, segment.querySelector('.row > div button[title="Меню пользователя"]').parentNode.parentNode.previousElementSibling);
 
                                     // Останавливаем наблюдение, если блок добавлен
                                     observer.disconnect();

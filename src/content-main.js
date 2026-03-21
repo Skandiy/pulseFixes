@@ -43,14 +43,14 @@ function setPageSettings(settings) {
 }
 
 function getAccessToken() {
-    const common = localStorage.getItem('common');
+    const SHARED_TOKEN_STORAGE = localStorage.getItem('SHARED_TOKEN_STORAGE');
 
-    if (!common) {
-        throw new Error('common storage entry is missing');
+    if (!SHARED_TOKEN_STORAGE) {
+        throw new Error('SHARED_TOKEN_STORAGE storage entry is missing');
     }
 
-    const parsed = JSON.parse(common);
-    const token = parsed?.authSystemStore?.token_;
+    const parsed = JSON.parse(SHARED_TOKEN_STORAGE);
+    const token = parsed?.token;
 
     if (!token) {
         throw new Error('auth token is missing');
@@ -64,7 +64,7 @@ function sendRequest(payload) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            's-access-token': getAccessToken(),
+            'authorization': 'Bearer '+getAccessToken(),
         },
         body: JSON.stringify(payload),
     }).then((response) => response.json());
@@ -107,6 +107,54 @@ function registerWindowNotificationBridge() {
                 id: event.data.id,
                 payload: event.data.payload,
             });
+        }
+
+        if (event.data?.type === MESSAGE_TYPES.WINDOW_EXECUTE_PAGE_REQUEST) {
+            sendRequest(event.data.payload)
+                .then((data) => {
+                    window.postMessage({
+                        type: MESSAGE_TYPES.WINDOW_EXECUTE_PAGE_REQUEST_RESULT,
+                        id: event.data.id,
+                        response: {
+                            ok: true,
+                            data,
+                        },
+                    }, '*');
+                })
+                .catch((error) => {
+                    window.postMessage({
+                        type: MESSAGE_TYPES.WINDOW_EXECUTE_PAGE_REQUEST_RESULT,
+                        id: event.data.id,
+                        response: {
+                            ok: false,
+                            error: error.message,
+                        },
+                    }, '*');
+                });
+        }
+
+        if (event.data?.type === MESSAGE_TYPES.WINDOW_EXECUTE_LOCAL_HTTP_REQUEST) {
+            chrome.runtime.sendMessage({
+                type: MESSAGE_TYPES.EXECUTE_LOCAL_HTTP_REQUEST,
+                payload: event.data.payload,
+            })
+                .then((response) => {
+                    window.postMessage({
+                        type: MESSAGE_TYPES.WINDOW_EXECUTE_LOCAL_HTTP_REQUEST_RESULT,
+                        id: event.data.id,
+                        response,
+                    }, '*');
+                })
+                .catch((error) => {
+                    window.postMessage({
+                        type: MESSAGE_TYPES.WINDOW_EXECUTE_LOCAL_HTTP_REQUEST_RESULT,
+                        id: event.data.id,
+                        response: {
+                            ok: false,
+                            error: error.message,
+                        },
+                    }, '*');
+                });
         }
     });
 }
