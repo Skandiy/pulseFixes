@@ -2,6 +2,7 @@
   "scripts": [
     "scripts/notifications.js",
     "scripts/loadSettings.js",
+    "scripts/taskProjectGitWatcher.js",
     "scripts/rules.js",
     "scripts/darkTheme.js",
     "scripts/chat.js",
