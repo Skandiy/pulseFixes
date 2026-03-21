@@ -1,0 +1,22 @@
+.stack-dashboard__item {
+    /*--stack-dashboard_y: 1;*/
+    /*--stack-dashboard_h: 1;*/
+    /*--stack-dashboard_x: 1;*/
+    /*--stack-dashboard_w: 1;*/
+    grid-row: var(--stack-dashboard_y)/calc(var(--stack-dashboard_y) + var(--stack-dashboard_h));
+    grid-column: var(--stack-dashboard_x) / calc(var(--stack-dashboard_x) + var(--stack-dashboard_w));
+
+    &:first-child {
+        grid-column: 1 / 10;
+        grid-row: 1 / 18;
+    }
+
+    &:nth-child(2) {
+        grid-row: 1 / 7;
+    }
+
+    &:nth-child(3) {
+        grid-column: 10 / 13;
+        grid-row: 7 / 18;
+    }
+}

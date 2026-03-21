@@ -13,6 +13,7 @@
     "styles/darkThemeVariablesUsed.css",
     "styles/darkThemeClassStyles.css",
     "styles/chat.css",
+    "styles/main.css",
     {
       "key": "changeCalendar",
       "value": "styles/calendar.css"

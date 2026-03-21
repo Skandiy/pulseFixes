@@ -1,3 +1,5 @@
+import { MESSAGE_TYPES, URLS } from './src/shared-constants.js';
+
 // MV3 Service Worker
 
 const recentByMsgId = Object.create(null);
@@ -38,7 +40,7 @@ function extractTargetPathFromSubtitle(subtitle) {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message?.type !== 'show-notification') return;
+    if (message?.type !== MESSAGE_TYPES.SHOW_NOTIFICATION) return;
 
     const msgId = message.id ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     if (recentByMsgId[msgId]) {
@@ -52,7 +54,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     const base = sender?.tab?.url
         ? new URL(sender.tab.url).origin
-        : 'https://pulse.stack-it.ru';
+        : URLS.PULSE_BASE;
 
     const fullUrl = relativePath ? new URL(relativePath, base).href : null;
     const notificationId = `pulse:${Date.now()}:${msgId}`;
