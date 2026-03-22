@@ -49,6 +49,7 @@
     let currentMenuElement = null;
     let currentTooltipElement = null;
     let currentTooltipBridgeElement = null;
+    let currentTooltipOwnerElement = null;
     let spinnerStyleInjected = false;
     let uiState = {
         mode: null,
@@ -290,7 +291,21 @@
             .filter((entry) => entry.name && entry.url);
     }
 
-    function normalizeIdeEntries(servers) {
+    function buildIdeDisplayName(productName, version, fullApplicationName) {
+        if (typeof fullApplicationName === 'string' && fullApplicationName.trim()) {
+            return fullApplicationName.trim();
+        }
+
+        if (typeof productName === 'string' && productName.trim() && typeof version === 'string' && version.trim()) {
+            return `${productName.trim()} ${version.trim()}`;
+        }
+
+        return typeof productName === 'string'
+            ? productName.trim()
+            : '';
+    }
+
+    function normalizePluginIdeEntries(servers) {
         if (!Array.isArray(servers)) {
             return [];
         }
@@ -303,6 +318,9 @@
                 const productName = typeof server?.about?.ide?.productName === 'string'
                     ? server.about.ide.productName.trim()
                     : '';
+                const fullApplicationName = typeof server?.about?.ide?.fullApplicationName === 'string'
+                    ? server.about.ide.fullApplicationName.trim()
+                    : '';
 
                 if (!port || !productName || seenPorts.has(port)) {
                     return null;
@@ -312,10 +330,109 @@
 
                 return {
                     productName,
-                    port,
+                    fullApplicationName,
+                    pluginPort: port,
                 };
             })
             .filter(Boolean);
+    }
+
+    function normalizeRunningIdeEntries(servers) {
+        if (!Array.isArray(servers)) {
+            return [];
+        }
+
+        const seenPorts = new Set();
+
+        return servers
+            .map((server) => {
+                const idePort = normalizeRecordId(server?.port);
+                const productName = typeof server?.about?.productName === 'string'
+                    ? server.about.productName.trim()
+                    : '';
+                const version = typeof server?.about?.version === 'string'
+                    ? server.about.version.trim()
+                    : '';
+                const fullApplicationName = typeof server?.about?.fullApplicationName === 'string'
+                    ? server.about.fullApplicationName.trim()
+                    : '';
+
+                if (!idePort || !productName || seenPorts.has(idePort)) {
+                    return null;
+                }
+
+                seenPorts.add(idePort);
+
+                return {
+                    idePort,
+                    productName,
+                    version,
+                    fullApplicationName: buildIdeDisplayName(productName, version, fullApplicationName),
+                };
+            })
+            .filter(Boolean);
+    }
+
+    function mergeRunningAndPluginIdes(runningIdes, pluginIdes) {
+        if (!Array.isArray(runningIdes) || runningIdes.length === 0) {
+            return [];
+        }
+
+        const remainingPluginIdes = Array.isArray(pluginIdes)
+            ? [...pluginIdes]
+            : [];
+
+        return runningIdes.map((runningIde) => {
+            const normalizedFullApplicationName = typeof runningIde.fullApplicationName === 'string'
+                ? runningIde.fullApplicationName.trim()
+                : '';
+            let matchedPluginIde = null;
+
+            if (normalizedFullApplicationName) {
+                const pluginCandidatesByFullApplicationName = remainingPluginIdes.filter((pluginIde) => {
+                    const pluginFullApplicationName = typeof pluginIde.fullApplicationName === 'string'
+                        ? pluginIde.fullApplicationName.trim()
+                        : '';
+
+                    return pluginFullApplicationName === normalizedFullApplicationName;
+                });
+
+                if (pluginCandidatesByFullApplicationName.length === 1) {
+                    [matchedPluginIde] = pluginCandidatesByFullApplicationName;
+                } else if (pluginCandidatesByFullApplicationName.length > 1) {
+                    console.warn('[Pulse Plus] Неоднозначное сопоставление IDE и plugin API по fullApplicationName:', {
+                        runningIde,
+                        pluginCandidatesByFullApplicationName,
+                    });
+                }
+            }
+
+            if (matchedPluginIde) {
+                const matchedPluginIndex = remainingPluginIdes.indexOf(matchedPluginIde);
+                if (matchedPluginIndex >= 0) {
+                    remainingPluginIdes.splice(matchedPluginIndex, 1);
+                }
+            }
+
+            const hasPlugin = Boolean(matchedPluginIde?.pluginPort);
+            const fullApplicationName = buildIdeDisplayName(
+                runningIde.productName,
+                runningIde.version,
+                matchedPluginIde?.fullApplicationName ?? runningIde.fullApplicationName
+            );
+
+            return {
+                idePort: runningIde.idePort,
+                pluginPort: matchedPluginIde?.pluginPort ?? null,
+                productName: runningIde.productName,
+                version: runningIde.version,
+                fullApplicationName,
+                hasPlugin,
+                isRunning: true,
+                canOpenProject: hasPlugin,
+                disabledReason: hasPlugin ? null : DISABLED_REASON_TRICK_NOT_INSTALLED,
+            };
+        });
     }
 
     function getRelativeProjectPath(gitUrl) {
@@ -377,6 +494,45 @@
             version,
             serverHeader: normalizedHeader,
         };
+    }
+
+    function parseRunningIdeAboutBody(bodyText) {
+        if (typeof bodyText !== 'string' || !bodyText.trim()) {
+            return null;
+        }
+
+        try {
+            const payload = JSON.parse(bodyText);
+            const productName = typeof payload?.productName === 'string'
+                ? payload.productName.trim()
+                : '';
+            const fullApplicationName = typeof payload?.fullApplicationName === 'string'
+                ? payload.fullApplicationName.trim()
+                : typeof payload?.name === 'string'
+                    ? payload.name.trim()
+                    : '';
+            const version = typeof payload?.version === 'string'
+                ? payload.version.trim()
+                : '';
+
+            let normalizedVersion = version;
+            if (!normalizedVersion && fullApplicationName) {
+                const versionMatch = fullApplicationName.match(/^(.+?)\s+(\d+(?:\.\d+)+)$/);
+                normalizedVersion = versionMatch?.[2] ?? '';
+            }
+
+            if (!productName || !normalizedVersion) {
+                return null;
+            }
+
+            return {
+                productName,
+                version: normalizedVersion,
+                fullApplicationName,
+            };
+        } catch (_) {
+            return null;
+        }
     }
 
     function getPreferredIdeServer(servers) {
@@ -452,18 +608,22 @@
                 responseType: 'text',
             });
 
+            const parsedBody = parseRunningIdeAboutBody(response.body);
             const parsedServer = parseRunningIdeServerHeader(response.headers?.server);
-            if (!parsedServer) {
+            const parsedAbout = parsedBody ?? parsedServer;
+
+            if (!parsedAbout) {
                 console.log('[Pulse Plus] IDE app API ответил без подходящего Server header:', {
                     port,
                     status: response.status,
                     server: response.headers?.server ?? null,
+                    body: response.body ?? null,
                 });
                 return null;
             }
 
             const payload = {
-                ...parsedServer,
+                ...parsedAbout,
                 status: response.status,
             };
 
@@ -641,6 +801,7 @@
             }
 
             console.log('[Pulse Plus] Найдены IDE app ports:', cachedRunningIdePorts);
+            console.log('[Pulse Plus] Найдены IDE app:', discoveredServers);
 
             return {
                 servers: discoveredServers,
@@ -714,6 +875,8 @@
             currentTooltipElement.remove();
             currentTooltipElement = null;
         }
+
+        currentTooltipOwnerElement = null;
     }
 
     function disconnectUiObserver() {
@@ -827,27 +990,58 @@
         removeOpenIdeUi();
     }
 
-    function createMenuItem(label) {
+    function getTrickPluginTooltipContent() {
+        return {
+            prefix: 'Чтобы открыть проект в IDE нужно установить плагин ',
+            linkText: 'Трик',
+            linkHref: TRICK_PLUGIN_URL,
+        };
+    }
+
+    function createMenuItem({ label, disabled = false, tooltip = '', onClick = null }) {
         const button = document.createElement('button');
         button.type = 'button';
         button.textContent = label;
         button.style.display = 'block';
+        button.style.position = 'relative';
         button.style.width = '100%';
         button.style.padding = '8px 12px';
-        button.style.background = '#fff';
+        button.style.background = 'var(--v-base-1-base)';
         button.style.border = '0';
         button.style.textAlign = 'left';
-        button.style.cursor = 'pointer';
         button.style.font = 'inherit';
-        button.style.color = '#1e1e1e';
+        button.style.color = disabled
+            ? 'color-mix(in srgb, var(--v-ty-primary-base) 55%, transparent)'
+            : 'var(--v-ty-primary-base)';
+        button.style.cursor = disabled ? 'not-allowed' : 'pointer';
+        button.style.opacity = '1';
+
+        if (disabled) {
+            button.setAttribute('aria-disabled', 'true');
+        }
 
         button.addEventListener('mouseenter', () => {
-            button.style.background = '#f4f6f8';
+            button.style.background = disabled
+                ? 'var(--v-base-1-base)'
+                : 'var(--v-base-3-base)';
+
+            if (disabled && tooltip) {
+                showDisabledTooltip(button, tooltip, {
+                    placement: 'left',
+                });
+            }
         });
 
-        button.addEventListener('mouseleave', () => {
-            button.style.background = '#fff';
+        button.addEventListener('mouseleave', (event) => {
+            button.style.background = 'var(--v-base-1-base)';
+            if (disabled && tooltip && !isNodeInsideCurrentTooltipRegion(event.relatedTarget)) {
+                removeCurrentTooltip();
+            }
         });
+
+        if (!disabled && typeof onClick === 'function') {
+            button.addEventListener('click', onClick);
+        }
 
         return button;
     }
@@ -897,8 +1091,13 @@
         console.log('[Pulse Plus] IDE open payload:', payload);
         console.log('[Pulse Plus] Выбрана IDE:', ide);
 
+        if (!ide?.canOpenProject || !ide?.pluginPort) {
+            console.warn('[Pulse Plus] IDE недоступна для открытия проекта:', ide);
+            return;
+        }
+
         try {
-            const response = await sendOpenProjectRequest(ide.port, payload, true);
+            const response = await sendOpenProjectRequest(ide.pluginPort, payload, true);
             console.log('[Pulse Plus] IDE open response:', response);
         } catch (error) {
             console.error('[Pulse Plus] Не удалось отправить команду в IDE API:', error);
@@ -914,16 +1113,15 @@
         menu.style.right = '0';
         menu.style.minWidth = '220px';
         menu.style.maxWidth = '320px';
-        menu.style.background = '#fff';
-        menu.style.border = '1px solid rgba(0, 0, 0, 0.12)';
+        menu.style.background = 'var(--v-base-1-base)';
+        menu.style.border = '0 solid rgba(0, 0, 0, 0.12)';
         menu.style.borderRadius = '8px';
-        menu.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.18)';
+        menu.style.boxShadow = 'color-mix(in srgb, var(--v-ty-primary-base) 16%, transparent) 0px 8px 26px 16px';
         menu.style.padding = '6px 0';
         menu.style.zIndex = '10000';
 
         items.forEach((item) => {
-            const itemButton = createMenuItem(item.label);
-            itemButton.addEventListener('click', item.onClick);
+            const itemButton = createMenuItem(item);
             menu.appendChild(itemButton);
         });
 
@@ -947,7 +1145,11 @@
         console.log('[Pulse Plus] Открываем меню выбора IDE для git:', entry.url);
 
         const items = uiState.ides.map((ide) => ({
-            label: `${ide.productName} (${ide.port})`,
+            label: `${ide.fullApplicationName}`,
+            disabled: !ide.canOpenProject,
+            tooltip: ide.disabledReason === DISABLED_REASON_TRICK_NOT_INSTALLED
+                ? getTrickPluginTooltipContent()
+                : '',
             onClick: async (event) => {
                 event.preventDefault();
                 event.stopPropagation();
@@ -981,10 +1183,12 @@
                 event.stopPropagation();
                 console.log('[Pulse Plus] Выбрана IDE ссылка:', entry.url);
 
-                if (uiState.ides.length === 1) {
+                const activeIdes = uiState.ides.filter((ide) => ide.canOpenProject);
+
+                if (uiState.ides.length === 1 && activeIdes.length === 1) {
                     removeCurrentMenu();
                     button.setAttribute('aria-expanded', 'false');
-                    await handleGitEntryClick(entry, uiState.ides[0]);
+                    await handleGitEntryClick(entry, activeIdes[0]);
                     return;
                 }
 
@@ -1057,11 +1261,7 @@
         }
 
         if (uiState.disabledReason === DISABLED_REASON_TRICK_NOT_INSTALLED) {
-            return {
-                prefix: 'Чтобы открыть проект в IDE нужно установить плагин ',
-                linkText: 'Трик',
-                linkHref: TRICK_PLUGIN_URL,
-            };
+            return getTrickPluginTooltipContent();
         }
 
         return 'Кнопка недоступна';
@@ -1094,84 +1294,170 @@
         tooltip.style.pointerEvents = 'auto';
     }
 
-    function showDisabledTooltip(wrapper, text) {
+    function tooltipContentHasLinks(content) {
+        return Boolean(content?.linkText && content?.linkHref);
+    }
+
+    function isNodeInsideCurrentTooltipRegion(target) {
+        return target instanceof Node && (
+            (currentTooltipOwnerElement instanceof Node && currentTooltipOwnerElement.contains(target))
+            || (currentTooltipElement instanceof Node && currentTooltipElement.contains(target))
+            || (currentTooltipBridgeElement instanceof Node && currentTooltipBridgeElement.contains(target))
+        );
+    }
+
+    function handleTooltipRegionMouseLeave(event) {
+        if (isNodeInsideCurrentTooltipRegion(event.relatedTarget)) {
+            return;
+        }
+
+        removeCurrentTooltip();
+    }
+
+    function showDisabledTooltip(wrapper, text, options = {}) {
         if (!text) {
             removeCurrentTooltip();
             return;
         }
 
+        const placement = options?.placement === 'left'
+            ? 'left'
+            : 'bottom';
+        const isFixedLeftPlacement = placement === 'left';
         const wrapperWidth = Math.ceil(wrapper.getBoundingClientRect().width);
-        const tooltipWidth = wrapperWidth * 1.5;
+        const tooltipWidth = isFixedLeftPlacement
+            ? Math.max(240, wrapperWidth * 1.5)
+            : wrapperWidth * 1.5;
         const tooltipGap = 8;
-        const bridgeHeight = 14;
-        const bridgeWidth = Math.max(tooltipWidth + 32, 96);
+        const hasLinks = tooltipContentHasLinks(text);
+        const safeZonePadding = 12;
 
-        const existingTooltip = wrapper.querySelector(`[${OPEN_IDE_TOOLTIP_ATTR}="true"]`);
-        const existingBridge = wrapper.querySelector(`[${OPEN_IDE_TOOLTIP_BRIDGE_ATTR}="true"]`);
-        if (existingTooltip) {
-            fillTooltipContent(existingTooltip, text);
-            existingTooltip.style.width = `${tooltipWidth}px`;
-            existingTooltip.style.minWidth = `${tooltipWidth}px`;
-            existingTooltip.style.maxWidth = `${tooltipWidth}px`;
-            existingTooltip.style.top = `calc(100% + ${tooltipGap}px)`;
+        removeCurrentTooltip();
+        currentTooltipOwnerElement = wrapper;
 
-            if (existingBridge) {
-                existingBridge.style.top = '100%';
-                existingBridge.style.left = '50%';
-                existingBridge.style.transform = 'translateX(-50%)';
-                existingBridge.style.width = `${bridgeWidth}px`;
-                existingBridge.style.height = `${tooltipGap + bridgeHeight}px`;
-            }
+        if (isFixedLeftPlacement) {
+            const wrapperRect = wrapper.getBoundingClientRect();
+            const tooltip = document.createElement('div');
+            tooltip.setAttribute(OPEN_IDE_TOOLTIP_ATTR, 'true');
+            tooltip.style.position = 'fixed';
+            tooltip.style.left = `${Math.max(8, Math.round(wrapperRect.left - tooltipWidth - tooltipGap))}px`;
+            tooltip.style.top = `${Math.round(wrapperRect.top + (wrapperRect.height / 2))}px`;
+            tooltip.style.transform = 'translateY(-50%)';
+            tooltip.style.width = `${tooltipWidth}px`;
+            tooltip.style.minWidth = `${tooltipWidth}px`;
+            tooltip.style.maxWidth = `${tooltipWidth}px`;
+            tooltip.style.display = 'block';
+            tooltip.style.padding = '8px 10px';
+            tooltip.style.background = 'var(--v-base-1-base)';
+            tooltip.style.color = 'var(--v-ty-primary-base)';
+            tooltip.style.opacity = '1';
+            tooltip.style.borderRadius = '6px';
+            tooltip.style.boxShadow = 'color-mix(in srgb, var(--v-ty-primary-base) 16%, transparent) 0px 8px 26px 16px';
+            tooltip.style.fontSize = '12px';
+            tooltip.style.lineHeight = '1.4';
+            tooltip.style.whiteSpace = 'normal';
+            tooltip.style.textAlign = 'left';
+            tooltip.style.zIndex = '10002';
+            tooltip.style.fontFamily = 'Roboto,sans-serif';
+            fillTooltipContent(tooltip, text);
+            tooltip.addEventListener('mouseleave', handleTooltipRegionMouseLeave);
 
-            currentTooltipBridgeElement = existingBridge ?? null;
-            currentTooltipElement = existingTooltip;
+            document.body.appendChild(tooltip);
+            currentTooltipElement = tooltip;
+        } else {
+            const tooltip = document.createElement('div');
+            tooltip.setAttribute(OPEN_IDE_TOOLTIP_ATTR, 'true');
+            tooltip.style.position = 'absolute';
+            tooltip.style.top = `calc(100% + ${tooltipGap}px)`;
+            tooltip.style.left = '50%';
+            tooltip.style.transform = 'translateX(-50%)';
+            tooltip.style.width = `${tooltipWidth}px`;
+            tooltip.style.minWidth = `${tooltipWidth}px`;
+            tooltip.style.maxWidth = `${tooltipWidth}px`;
+            tooltip.style.display = 'block';
+            tooltip.style.padding = '8px 10px';
+            tooltip.style.background = 'var(--v-base-1-base)';
+            tooltip.style.color = 'var(--v-ty-primary-base)';
+            tooltip.style.opacity = '1';
+            tooltip.style.borderRadius = '6px';
+            tooltip.style.boxShadow = 'color-mix(in srgb, var(--v-ty-primary-base) 16%, transparent) 0px 8px 26px 16px';
+            tooltip.style.fontSize = '12px';
+            tooltip.style.lineHeight = '1.4';
+            tooltip.style.whiteSpace = 'normal';
+            tooltip.style.textAlign = 'center';
+            tooltip.style.zIndex = '10001';
+            tooltip.style.fontFamily = 'Roboto,sans-serif';
+            fillTooltipContent(tooltip, text);
+            tooltip.addEventListener('mouseleave', handleTooltipRegionMouseLeave);
+
+            wrapper.appendChild(tooltip);
+            currentTooltipElement = tooltip;
+        }
+
+        if (!hasLinks || !currentTooltipElement) {
+            currentTooltipBridgeElement = null;
             return;
         }
 
-        removeCurrentTooltip();
+        const tooltipRect = currentTooltipElement.getBoundingClientRect();
+        const safeZone = document.createElement('div');
+        safeZone.setAttribute(OPEN_IDE_TOOLTIP_BRIDGE_ATTR, 'true');
+        safeZone.style.position = 'fixed';
+        safeZone.style.left = `${Math.max(0, Math.round(tooltipRect.left - safeZonePadding))}px`;
+        safeZone.style.top = `${Math.max(0, Math.round(tooltipRect.top - safeZonePadding))}px`;
+        safeZone.style.width = `${Math.round(tooltipRect.width + safeZonePadding * 2)}px`;
+        safeZone.style.height = `${Math.round(tooltipRect.height + safeZonePadding * 2)}px`;
+        safeZone.style.background = 'transparent';
+        safeZone.style.pointerEvents = 'none';
+        safeZone.style.zIndex = '10000';
 
-        const bridge = document.createElement('div');
-        bridge.setAttribute(OPEN_IDE_TOOLTIP_BRIDGE_ATTR, 'true');
-        bridge.style.position = 'absolute';
-        bridge.style.top = '100%';
-        bridge.style.left = '50%';
-        bridge.style.transform = 'translateX(-50%)';
-        bridge.style.width = `${bridgeWidth}px`;
-        bridge.style.height = `${tooltipGap + bridgeHeight}px`;
-        bridge.style.background = 'transparent';
-        bridge.style.pointerEvents = 'auto';
-        bridge.style.zIndex = '10000';
+        const strips = [
+            {
+                left: 0,
+                top: 0,
+                width: tooltipRect.width + safeZonePadding * 2,
+                height: safeZonePadding,
+            },
+            {
+                left: 0,
+                top: tooltipRect.height + safeZonePadding,
+                width: tooltipRect.width + safeZonePadding * 2,
+                height: safeZonePadding,
+            },
+            {
+                left: 0,
+                top: safeZonePadding,
+                width: safeZonePadding,
+                height: tooltipRect.height,
+            },
+            {
+                left: tooltipRect.width + safeZonePadding,
+                top: safeZonePadding,
+                width: safeZonePadding,
+                height: tooltipRect.height,
+            },
+        ];
 
-        const tooltip = document.createElement('div');
-        tooltip.setAttribute(OPEN_IDE_TOOLTIP_ATTR, 'true');
-        tooltip.style.position = 'absolute';
-        tooltip.style.top = `calc(100% + ${tooltipGap}px)`;
-        tooltip.style.left = '50%';
-        tooltip.style.transform = 'translateX(-50%)';
-        tooltip.style.width = `${tooltipWidth}px`;
-        tooltip.style.minWidth = `${tooltipWidth}px`;
-        tooltip.style.maxWidth = `${tooltipWidth}px`;
-        tooltip.style.display = `block`;
-        tooltip.style.padding = '8px 10px';
-        tooltip.style.background = '#1f2937';
-        tooltip.style.color = '#fff';
-        tooltip.style.borderRadius = '6px';
-        tooltip.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.18)';
-        tooltip.style.fontSize = '12px';
-        tooltip.style.lineHeight = '1.4';
-        tooltip.style.whiteSpace = 'normal';
-        tooltip.style.textAlign = 'center';
-        tooltip.style.zIndex = '10001';
-        fillTooltipContent(tooltip, text);
+        strips.forEach((stripRect) => {
+            const strip = document.createElement('div');
+            strip.style.position = 'absolute';
+            strip.style.left = `${Math.round(stripRect.left)}px`;
+            strip.style.top = `${Math.round(stripRect.top)}px`;
+            strip.style.width = `${Math.round(stripRect.width)}px`;
+            strip.style.height = `${Math.round(stripRect.height)}px`;
+            strip.style.background = 'transparent';
+            strip.style.pointerEvents = 'auto';
+            strip.addEventListener('mouseleave', handleTooltipRegionMouseLeave);
+            safeZone.appendChild(strip);
+        });
 
-        wrapper.appendChild(bridge);
-        wrapper.appendChild(tooltip);
-        currentTooltipBridgeElement = bridge;
-        currentTooltipElement = tooltip;
+        document.body.appendChild(safeZone);
+        currentTooltipBridgeElement = safeZone;
     }
 
     function applyButtonState(button, wrapper) {
-        const isReady = uiState.status === UI_STATE_READY && uiState.gitEntries.length > 0 && uiState.ides.length > 0;
+        const hasOpenableIde = uiState.ides.some((ide) => ide.canOpenProject);
+        const isReady = uiState.status === UI_STATE_READY && uiState.gitEntries.length > 0 && hasOpenableIde;
         const isLoading = uiState.status === UI_STATE_LOADING;
         const tooltip = getDisabledTooltip();
 
@@ -1220,7 +1506,11 @@
             showDisabledTooltip(wrapper, tooltip);
         });
 
-        wrapper.addEventListener('mouseleave', () => {
+        wrapper.addEventListener('mouseleave', (event) => {
+            if (isNodeInsideCurrentTooltipRegion(event.relatedTarget)) {
+                return;
+            }
+
             removeCurrentTooltip();
         });
 
@@ -1366,38 +1656,47 @@
             return;
         }
 
-        const ideDiscovery = await discoverIdePluginServer();
-        if (requestToken !== currentRequestToken) {
-            return;
-        }
-
-        const isPluginApiRunning = Boolean(ideDiscovery);
-        console.log('[Pulse Plus] Проверка 2/3: запущен ли API плагина:', isPluginApiRunning);
-
         const runningIdeDiscovery = await discoverRunningIdeServer();
         if (requestToken !== currentRequestToken) {
             return;
         }
 
         const isIdeRunning = Boolean(runningIdeDiscovery);
-        console.log('[Pulse Plus] Проверка 3/3: запущена ли сама IDE:', isIdeRunning);
+        console.log('[Pulse Plus] Проверка 2/3: запущена ли сама IDE:', isIdeRunning);
 
-        if (!ideDiscovery) {
-            const disabledReason = runningIdeDiscovery
-                ? DISABLED_REASON_TRICK_NOT_INSTALLED
-                : DISABLED_REASON_IDE_NOT_RUNNING;
-
-            updateDisabledUiState(mode, taskId, disabledReason, gitEntries);
+        const ideDiscovery = await discoverIdePluginServer();
+        if (requestToken !== currentRequestToken) {
             return;
         }
 
-        const ides = normalizeIdeEntries(ideDiscovery.servers);
-        if (ides.length === 0) {
-            const disabledReason = runningIdeDiscovery
-                ? DISABLED_REASON_TRICK_NOT_INSTALLED
-                : DISABLED_REASON_IDE_NOT_RUNNING;
+        const isPluginApiRunning = Boolean(ideDiscovery);
+        console.log('[Pulse Plus] Проверка 3/3: запущен ли API плагина:', isPluginApiRunning);
 
-            updateDisabledUiState(mode, taskId, disabledReason, gitEntries);
+        if (!runningIdeDiscovery) {
+            updateDisabledUiState(mode, taskId, DISABLED_REASON_IDE_NOT_RUNNING, gitEntries);
+            return;
+        }
+
+        const runningIdes = normalizeRunningIdeEntries(runningIdeDiscovery.servers);
+        if (runningIdes.length === 0) {
+            updateDisabledUiState(mode, taskId, DISABLED_REASON_IDE_NOT_RUNNING, gitEntries);
+            return;
+        }
+
+        const pluginIdes = ideDiscovery
+            ? normalizePluginIdeEntries(ideDiscovery.servers)
+            : [];
+        const ides = mergeRunningAndPluginIdes(runningIdes, pluginIdes);
+        const openableIdes = ides.filter((ide) => ide.canOpenProject);
+
+        if (ides.length === 0) {
+            updateDisabledUiState(mode, taskId, DISABLED_REASON_IDE_NOT_RUNNING, gitEntries);
+            return;
+        }
+
+        if (openableIdes.length === 0) {
+            console.log('[Pulse Plus] Запущенные IDE без доступного plugin API:', ides);
+            updateDisabledUiState(mode, taskId, DISABLED_REASON_TRICK_NOT_INSTALLED, gitEntries);
             return;
         }
 
