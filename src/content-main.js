@@ -1,6 +1,8 @@
 import { MESSAGE_TYPES, STORAGE_KEYS, URLS } from './shared-constants.js';
 import { getExtensionSettings } from './shared-settings.js';
 
+const SHARED_TOKEN_STORAGE_KEY = 'SHARED_TOKEN_STORAGE';
+
 function appendStyles(styles, settings) {
     for (const path of styles) {
         let stylePath = path;
@@ -42,17 +44,27 @@ function setPageSettings(settings) {
     });
 }
 
-function getAccessToken() {
-    const SHARED_TOKEN_STORAGE = localStorage.getItem('SHARED_TOKEN_STORAGE');
+function readSharedTokenStorage() {
+    const rawValue = localStorage.getItem(SHARED_TOKEN_STORAGE_KEY);
 
-    if (!SHARED_TOKEN_STORAGE) {
-        throw new Error('SHARED_TOKEN_STORAGE storage entry is missing');
+    if (!rawValue) {
+        return null;
     }
 
-    const parsed = JSON.parse(SHARED_TOKEN_STORAGE);
-    const token = parsed?.token;
+    try {
+        const parsed = JSON.parse(rawValue);
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+            ? parsed
+            : null;
+    } catch (error) {
+        return null;
+    }
+}
 
-    if (!token) {
+function getAccessToken() {
+    const token = readSharedTokenStorage()?.token;
+
+    if (typeof token !== 'string' || !token) {
         throw new Error('auth token is missing');
     }
 
