@@ -3,10 +3,144 @@ var sprint = null;
 (() => {
     const _parse = JSON.parse;
     const _stringify = JSON.stringify;
-
     const _originalJson = Response.prototype.json;
+    const DEBUG_STORAGE_KEY = 'TRICK_DEBUG_LOGGING';
+    const DEBUG_STORAGE_LIMIT_PER_KEY = 5;
+    const pendingRequestsByTaskId = new Map();
 
     let userId = null;
+
+    function generateRequestTaskId() {
+        if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+            return window.crypto.randomUUID();
+        }
+
+        const buffer = new Uint8Array(16);
+        window.crypto.getRandomValues(buffer);
+        buffer[6] = (buffer[6] & 0x0f) | 0x40;
+        buffer[8] = (buffer[8] & 0x3f) | 0x80;
+
+        const hex = Array.from(buffer, (byte) => byte.toString(16).padStart(2, '0'));
+        return [
+            hex.slice(0, 4).join(''),
+            hex.slice(4, 6).join(''),
+            hex.slice(6, 8).join(''),
+            hex.slice(8, 10).join(''),
+            hex.slice(10, 16).join(''),
+        ].join('-');
+    }
+
+    function isObject(value) {
+        return value && typeof value === 'object' && !Array.isArray(value);
+    }
+
+    function isPulseTasksPayload(value) {
+        return isObject(value) && Array.isArray(value.tasks) && value.tasks.length > 0;
+    }
+
+    function buildTaskStorageKey(task) {
+        const objectName = typeof task?.objectName === 'string' && task.objectName
+            ? task.objectName
+            : 'unknown';
+        const methodName = typeof task?.methodName === 'string' && task.methodName
+            ? task.methodName
+            : 'unknown';
+        return `${objectName}_${methodName}`;
+    }
+
+    function safeCloneForStorage(value) {
+        if (value == null) {
+            return value;
+        }
+
+        try {
+            return _parse(_stringify(value));
+        } catch (_) {
+            return null;
+        }
+    }
+
+    function readDebugLogStorage() {
+        try {
+            const rawValue = localStorage.getItem(DEBUG_STORAGE_KEY);
+
+            if (!rawValue) {
+                return {};
+            }
+
+            const parsed = _parse(rawValue);
+            return isObject(parsed) ? parsed : {};
+        } catch (_) {
+            return {};
+        }
+    }
+
+    function writeDebugLogStorage(value) {
+        try {
+            localStorage.setItem(DEBUG_STORAGE_KEY, _stringify(value));
+        } catch (error) {
+            console.error('Не удалось сохранить API debug лог:', error);
+        }
+    }
+
+    function registerPendingPayload(payload) {
+        if (!isPulseTasksPayload(payload)) {
+            return;
+        }
+
+        payload.tasks.forEach((task) => {
+            if (!isObject(task)) {
+                return;
+            }
+
+            if (!task.id) {
+                task.id = generateRequestTaskId();
+            }
+
+            pendingRequestsByTaskId.set(task.id, {
+                taskId: task.id,
+                storageKey: buildTaskStorageKey(task),
+                createdAt: new Date().toISOString(),
+                request: {
+                    body: safeCloneForStorage(payload),
+                    task: safeCloneForStorage(task),
+                },
+            });
+        });
+    }
+
+    function persistMatchedResponse(task, parsedResponse) {
+        const taskId = task?.id;
+
+        if (!taskId || !pendingRequestsByTaskId.has(taskId)) {
+            return;
+        }
+
+        const pending = pendingRequestsByTaskId.get(taskId);
+        const storage = readDebugLogStorage();
+        const storageKey = pending.storageKey || buildTaskStorageKey(task);
+        const records = Array.isArray(storage[storageKey]) ? storage[storageKey] : [];
+
+        records.push({
+            taskId,
+            createdAt: pending.createdAt,
+            completedAt: new Date().toISOString(),
+            request: {
+                body: pending.request.body
+            },
+            response: {
+                body: safeCloneForStorage(parsedResponse)
+            },
+        });
+
+        while (records.length > DEBUG_STORAGE_LIMIT_PER_KEY) {
+            records.shift();
+        }
+
+        storage[storageKey] = records;
+        writeDebugLogStorage(storage);
+        pendingRequestsByTaskId.delete(taskId);
+    }
 
     getPulseSettings()
         .then((settings) => {
@@ -134,6 +268,12 @@ var sprint = null;
                     });
                 }
 
+                if (Array.isArray(parsed?.tasks)) {
+                    parsed.tasks.forEach((task) => {
+                        persistMatchedResponse(task, parsed);
+                    });
+                }
+
                 return parsed;
             };
             let customStringify = function (arg, replacer, space) {
@@ -183,6 +323,8 @@ var sprint = null;
                 //     }
                 // }
 
+                registerPendingPayload(arg);
+
                 return _stringify(arg, replacer, space);
             };
 
@@ -213,6 +355,12 @@ var sprint = null;
                     if (parsed.roles) {
                         parsed.roles.push('ADMIN');
                     }
+                }
+
+                if (Array.isArray(parsed?.tasks)) {
+                    parsed.tasks.forEach((task) => {
+                        persistMatchedResponse(task, parsed);
+                    });
                 }
 
                 // можно изменить результат
