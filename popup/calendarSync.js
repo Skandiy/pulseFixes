@@ -27,23 +27,66 @@ function formatICSDate(date) {
         .split('.')[0] + 'Z';
 }
 
-function parseDateTime(date, time) {
-    return new Date(`${date.split('T')[0]}T${time}:00`);
-}
-
-function buildIcsDescription(comment) {
-    if (!comment) {
-        return '-';
+function normalizeDateTimeValue(value) {
+    if (typeof value !== 'string') {
+        return null;
     }
 
-    let text = comment.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    const trimmed = value.trim();
 
-    text = text
+    if (!trimmed) {
+        return null;
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+        return `${trimmed}T00:00:00`;
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}$/.test(trimmed)) {
+        return `${trimmed.replace(' ', 'T')}:00`;
+    }
+
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(trimmed)) {
+        return trimmed.replace(' ', 'T');
+    }
+
+    return trimmed.replace(' ', 'T');
+}
+
+function parseDateTime(value, fallbackDate, fallbackTime) {
+    const normalizedValue = normalizeDateTimeValue(value);
+
+    if (normalizedValue) {
+        const parsed = new Date(normalizedValue);
+
+        if (!Number.isNaN(parsed.getTime())) {
+            return parsed;
+        }
+    }
+
+    if (fallbackDate && fallbackTime) {
+        const fallback = new Date(`${fallbackDate.split('T')[0]}T${fallbackTime}:00`);
+
+        if (!Number.isNaN(fallback.getTime())) {
+            return fallback;
+        }
+    }
+
+    return null;
+}
+
+function escapeICSValue(value) {
+    return String(value ?? '-')
+        .replace(/\r\n/g, '\n')
+        .replace(/\r/g, '\n')
         .replace(/\\/g, '\\\\')
         .replace(/;/g, '\\;')
         .replace(/,/g, '\\,')
         .replace(/\n/g, '\\n');
+}
 
+function foldICSLine(value) {
+    let text = value;
     const maxLength = 70;
     const parts = [];
 
@@ -57,27 +100,107 @@ function buildIcsDescription(comment) {
     return parts.join('\r\n ');
 }
 
+function buildIcsDescription(comment) {
+    if (!comment) {
+        return '-';
+    }
+
+    return foldICSLine(escapeICSValue(comment));
+}
+
+function buildIcsSummary(name) {
+    return foldICSLine(escapeICSValue(name || 'Без названия'));
+}
+
+function parseReminderDuration(value) {
+    const normalized = String(value ?? '').trim().toLowerCase();
+
+    if (!normalized) {
+        return null;
+    }
+
+    if (/^\d+$/.test(normalized)) {
+        return `PT${normalized}M`;
+    }
+
+    const match = normalized.match(/^(\d+)\s*(min|mins|minute|minutes|hour|hours|day|days)$/i);
+
+    if (!match) {
+        return null;
+    }
+
+    const amount = Number(match[1]);
+    const unit = match[2].toLowerCase();
+
+    if (unit.startsWith('day')) {
+        return `P${amount}D`;
+    }
+
+    if (unit.startsWith('hour')) {
+        return `PT${amount}H`;
+    }
+
+    return `PT${amount}M`;
+}
+
+function extractEventsFromTaskResult(result) {
+    if (Array.isArray(result)) {
+        return result.flatMap((item) => {
+            if (Array.isArray(item?.events)) {
+                return item.events;
+            }
+
+            return item && typeof item === 'object'
+                ? [item]
+                : [];
+        });
+    }
+
+    if (Array.isArray(result?.события)) {
+        return result.события;
+    }
+
+    if (Array.isArray(result?.events)) {
+        return result.events;
+    }
+
+    return [];
+}
+
+export function extractEventsFromApiResponse(response) {
+    if (!Array.isArray(response?.data?.tasks)) {
+        return [];
+    }
+
+    return response.data.tasks.flatMap((task) => extractEventsFromTaskResult(task?.result));
+}
+
 function eventToVEVENT(event) {
-    const startDate = parseDateTime(event.date, event.time);
-    const endDate = new Date(event.end.replace(' ', 'T') + ':00');
+    const startDate = parseDateTime(event.start, event.date, event.time);
+    const endDate = parseDateTime(event.end) ?? startDate;
+
+    if (!startDate || !endDate) {
+        return null;
+    }
+
     const lines = [
         'BEGIN:VEVENT',
         `UID:event-${event.id}@vpn.sk-serv.ru`,
         `DTSTAMP:${formatICSDate(new Date())}`,
         `DTSTART:${formatICSDate(startDate)}`,
         `DTEND:${formatICSDate(endDate)}`,
-        `SUMMARY:${event.name}`,
+        `SUMMARY:${buildIcsSummary(event.name)}`,
         `DESCRIPTION:${buildIcsDescription(event.comment)}`,
     ];
 
     if (event.notify) {
         event.notify.split(',').forEach((notifyValue) => {
-            const minutes = parseInt(notifyValue, 10);
+            const duration = parseReminderDuration(notifyValue);
 
-            if (!Number.isNaN(minutes)) {
+            if (duration) {
                 lines.push(
                     'BEGIN:VALARM',
-                    `TRIGGER:-PT${minutes}M`,
+                    `TRIGGER:-${duration}`,
                     'ACTION:DISPLAY',
                     'DESCRIPTION:Напоминание',
                     'END:VALARM',
@@ -101,7 +224,11 @@ function generateICS(events) {
     ];
 
     for (const event of events) {
-        calendar.push(eventToVEVENT(event));
+        const vevent = eventToVEVENT(event);
+
+        if (vevent) {
+            calendar.push(vevent);
+        }
     }
 
     calendar.push('END:VCALENDAR');
@@ -180,7 +307,7 @@ async function getEvents() {
             },
         });
 
-        return response?.data?.tasks?.[0]?.result?.события ?? [];
+        return extractEventsFromApiResponse(response);
     } catch (_) {
         return [];
     }
