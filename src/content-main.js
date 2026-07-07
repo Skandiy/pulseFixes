@@ -1,8 +1,6 @@
 import { MESSAGE_TYPES, STORAGE_KEYS, URLS } from './shared-constants.js';
 import { getExtensionSettings } from './shared-settings.js';
 
-const SHARED_TOKEN_STORAGE_KEY = 'SHARED_TOKEN_STORAGE';
-
 function appendStyles(styles, settings) {
     for (const path of styles) {
         let stylePath = path;
@@ -23,15 +21,26 @@ function appendStyles(styles, settings) {
     }
 }
 
-function appendScripts(scripts) {
+function appendScripts(scripts, settings) {
     const bridgeScript = document.createElement('script');
     bridgeScript.src = chrome.runtime.getURL('scripts/pageBridge.js');
     bridgeScript.dataset.from = 'pulse-extension';
     document.documentElement.appendChild(bridgeScript);
 
     for (const path of scripts) {
+        let scriptPath = path;
+
+        if (typeof path === 'object') {
+            if (!settings[path.key]) {
+                continue;
+            }
+
+            scriptPath = path.value;
+        }
+
         const script = document.createElement('script');
-        script.src = chrome.runtime.getURL(path);
+        script.src = chrome.runtime.getURL(scriptPath);
+        script.async = false;
         script.dataset.from = 'pulse-extension';
         document.documentElement.appendChild(script);
     }
@@ -44,39 +53,21 @@ function setPageSettings(settings) {
     });
 }
 
-function readSharedTokenStorage() {
-    const rawValue = localStorage.getItem(SHARED_TOKEN_STORAGE_KEY);
-
-    if (!rawValue) {
-        return null;
+function syncPageLocalStorageSettings(settings) {
+    if (settings[STORAGE_KEYS.TRICK_DEBUG_LOGGING]) {
+        localStorage.setItem('TRICK_DEBUG_LOGGING', '1');
+        return;
     }
 
-    try {
-        const parsed = JSON.parse(rawValue);
-        return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-            ? parsed
-            : null;
-    } catch (error) {
-        return null;
-    }
-}
-
-function getAccessToken() {
-    const token = readSharedTokenStorage()?.token;
-
-    if (typeof token !== 'string' || !token) {
-        throw new Error('auth token is missing');
-    }
-
-    return token;
+    localStorage.removeItem('TRICK_DEBUG_LOGGING');
 }
 
 function sendRequest(payload) {
     return fetch(URLS.PULSE_KVPL, {
         method: 'POST',
+        credentials: 'include',
         headers: {
             'Content-Type': 'application/json',
-            'authorization': 'Bearer '+getAccessToken(),
         },
         body: JSON.stringify(payload),
     }).then((response) => response.json());
@@ -182,8 +173,9 @@ export async function bootstrapContent() {
     }
 
     appendStyles(styles, settings);
+    syncPageLocalStorageSettings(settings);
     setPageSettings(settings);
     registerRuntimeMessageHandlers();
-    appendScripts(scripts);
+    appendScripts(scripts, settings);
     registerWindowNotificationBridge();
 }

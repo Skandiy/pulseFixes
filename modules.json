@@ -2,19 +2,51 @@
   "scripts": [
     "scripts/notifications.js",
     "scripts/loadSettings.js",
-    "scripts/taskProjectGitWatcher.js",
-    "scripts/rules.js",
+    {
+      "key": "diagnosticTaskProjectGitWatcher",
+      "value": "scripts/taskProjectGitWatcher.js"
+    },
+    {
+      "key": "diagnosticRulesHooks",
+      "value": "scripts/rules.js"
+    },
+    "scripts/headerButtons.js",
     "scripts/darkTheme.js",
-    "scripts/chat.js",
-    "scripts/mainPage.js"
+    {
+      "key": "diagnosticChatPanel",
+      "value": "scripts/chat.js"
+    },
+    "scripts/mainPage.js",
+    {
+      "key": "eventPlanning",
+      "value": "scripts/eventPlanning.js"
+    }
   ],
   "styles": [
-    "styles/darkThemeCustom.css",
-    "styles/darkThemeVariables.css",
-    "styles/darkThemeVariablesUsed.css",
-    "styles/darkThemeClassStyles.css",
-    "styles/chat.css",
-    "styles/main.css",
+    {
+      "key": "diagnosticDarkThemeStyles",
+      "value": "styles/darkThemeCustom.css"
+    },
+    {
+      "key": "diagnosticDarkThemeStyles",
+      "value": "styles/darkThemeVariables.css"
+    },
+    {
+      "key": "diagnosticDarkThemeStyles",
+      "value": "styles/darkThemeVariablesUsed.css"
+    },
+    {
+      "key": "diagnosticDarkThemeStyles",
+      "value": "styles/darkThemeClassStyles.css"
+    },
+    {
+      "key": "diagnosticChatPanel",
+      "value": "styles/chat.css"
+    },
+    {
+      "key": "diagnosticBaseStyles",
+      "value": "styles/main.css"
+    },
     {
       "key": "changeCalendar",
       "value": "styles/calendar.css"

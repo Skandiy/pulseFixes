@@ -9,8 +9,8 @@
     const TASK_PROJECT_FIELD_NAME = 'карточка-проект';
     const PROJECT_GIT_FIELD_NAME = 'git';
     const ROPENED_PATTERN = /(?:^|[?&#]|%26)ropened=(?:number\|)?(\d+)/i;
-    const IDE_PLUGIN_PORT_START = 65333;
-    const IDE_PLUGIN_PORT_END = 65343;
+    const IDE_PLUGIN_PORT_START = 37133;
+    const IDE_PLUGIN_PORT_END = 37143;
     const IDE_PLUGIN_ABOUT_PATH = '/about';
     const IDE_APP_PORT_START = 63342;
     const IDE_APP_PORT_END = 63352;

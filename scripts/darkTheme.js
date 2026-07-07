@@ -1,42 +1,36 @@
 (() => {
-    const styleProto = CSSStyleDeclaration.prototype;
+    const DASHBOARD_SET_PROPERTY_PATCHED = '__pulsePlusDashboardSetPropertyPatched';
 
-    // let oneSet = 0;
-    // Оригинальный setProperty
-    const origSetProperty = styleProto.setProperty;
-    styleProto.setProperty = function(name, value, priority) {
+    function isSettingEnabled(settings, key) {
+        return settings?.[key] !== false;
+    }
 
-        // console.log('Изменение --stack-dashboard_h:');
-        if (name === '--stack-dashboard_h') {
-            // console.log('Изменение --stack-dashboard_h:', value);
-
-            if (this.cssText == '--stack-dashboard_y: 7; --stack-dashboard_h: 13; --stack-dashboard_x: 10; --stack-dashboard_w: 3; --stack-dashboard_min-w: 441.5px; --stack-dashboard_min-h: 613px;') {
-                // console.log('Изменение --stack-dashboard_h:', value);
-                value = '11';
-
-                // oneSet++;
-            }
-
-            if (this.cssText == '--stack-dashboard_y: 7; --stack-dashboard_h: 11; --stack-dashboard_x: 10; --stack-dashboard_w: 3; --stack-dashboard_min-w: 441.5px; --stack-dashboard_min-h: 613px;') {
-                // console.log('Изменение --stack-dashboard_h:', value);
-                value = '11';
-
-                // oneSet++;
-            }
-
-            // if (oneSet <= 1) {
-                // console.log('Изменение ', oneSet);
-                return origSetProperty.call(this, name, value, priority);
-            // }
-
-        } else {
-            return origSetProperty.call(this, name, value, priority);
+    function patchDashboardStyleSetProperty() {
+        const styleProto = CSSStyleDeclaration.prototype;
+        if (styleProto[DASHBOARD_SET_PROPERTY_PATCHED]) {
+            return;
         }
-    };
 
+        const origSetProperty = styleProto.setProperty;
+        Object.defineProperty(styleProto, DASHBOARD_SET_PROPERTY_PATCHED, {
+            value: true,
+            configurable: true
+        });
 
+        styleProto.setProperty = function(name, value, priority) {
+            if (name === '--stack-dashboard_h') {
+                if (this.cssText == '--stack-dashboard_y: 7; --stack-dashboard_h: 13; --stack-dashboard_x: 10; --stack-dashboard_w: 3; --stack-dashboard_min-w: 441.5px; --stack-dashboard_min-h: 613px;') {
+                    value = '11';
+                }
 
+                if (this.cssText == '--stack-dashboard_y: 7; --stack-dashboard_h: 11; --stack-dashboard_x: 10; --stack-dashboard_w: 3; --stack-dashboard_min-w: 441.5px; --stack-dashboard_min-h: 613px;') {
+                    value = '11';
+                }
+            }
 
+            return origSetProperty.call(this, name, value, priority);
+        };
+    }
 
     if (document.readyState === 'complete') {
         _();
@@ -45,51 +39,26 @@
     }
 
     function _ () {
-        /**
-         * Функция для добавления нового элемента в блок сразу после его появления на странице.
-         */
-        function addThemeBtn(newElementHTML) {
-            let selector = 'header'
+        function registerHeaderButton(definition) {
+            if (window.PulsePlusHeaderButtons) {
+                window.PulsePlusHeaderButtons.register(definition);
+                return;
+            }
 
+            window.addEventListener('PulsePlusHeaderButtonsReady', () => {
+                window.PulsePlusHeaderButtons?.register(definition);
+            }, { once: true });
+        }
+
+        function addThemeBtn() {
             const svg = '<svg id="_Слой_1" class="v-icon__svg" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10,10-4.48,10-10S17.52,2,12,2Zm0,16.98c-3.85,0-6.98-3.12-6.98-6.98s3.12-6.98,6.98-6.98,6.98,3.12,6.98,6.98-3.12,6.98-6.98,6.98Z"/><path d="M12,6.04v11.93c3.29,0,5.96-2.67,5.96-5.96s-2.67-5.96-5.96-5.96Z"/></svg>';
 
-            // Настраиваем наблюдатель
-            const observer = new MutationObserver((mutationsList) => {
-                for (const mutation of mutationsList) {
-                    if (mutation.type === 'childList') {
-                        // Проверяем все добавленные узлы
-                        mutation.addedNodes.forEach(node => {
-                            try {
-                                if (node.nodeType === 1 && node.matches(selector)) {
-
-                                    const segment = document.querySelectorAll('header .v-toolbar__content > div > div > div:last-of-type')[0];
-                                    // Блок найден, добавляем новый элемент
-                                    const referenceNode = [...segment.querySelectorAll('.row > div')].at(-3)
-
-                                    const btn = segment.querySelector('.row > div').cloneNode(true);
-
-                                    btn.querySelector('.v-icon').innerHTML = svg
-                                    btn.querySelector('button').title = 'Сменить тему оформления'
-
-                                    btn.querySelector('button').addEventListener('click', themeChange)
-
-                                    referenceNode.parentNode.insertBefore(btn, segment.querySelector('.row > div button[title="Меню пользователя"]').parentNode.parentNode.previousElementSibling);
-
-                                    // Останавливаем наблюдение, если блок добавлен
-                                    observer.disconnect();
-                                }
-                            }catch (e) {
-
-                            }
-                        });
-                    }
-                }
-            });
-
-            // Запускаем наблюдатель
-            observer.observe(document.body, {
-                childList: true,
-                subtree: true
+            registerHeaderButton({
+                id: 'theme',
+                title: 'Сменить тему оформления',
+                icon: svg,
+                placement: 'before-user-menu-previous',
+                onClick: themeChange
             });
         }
 
@@ -120,6 +89,10 @@
 
         getPulseSettings()
             .then((settings) => {
+                if (isSettingEnabled(settings, 'diagnosticCssSetPropertyPatch')) {
+                    patchDashboardStyleSetProperty();
+                }
+
                 if (!!settings.changeTheme) {
                     addThemeBtn()
                     themeSet()

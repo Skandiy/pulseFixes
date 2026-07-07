@@ -14,6 +14,7 @@ export const MESSAGE_TYPES = Object.freeze({
 export const STORAGE_KEYS = Object.freeze({
     ENABLE_FEATURES: 'enableFeatures',
     ADVANCED_SETTINGS: 'advancedSettings',
+    TRICK_DEBUG_LOGGING: 'trickDebugLogging',
 });
 
 export const URLS = Object.freeze({
@@ -24,14 +25,24 @@ export const URLS = Object.freeze({
 export const DEFAULT_SYNC_SETTINGS = Object.freeze({
     changeTheme: false,
     changeCalendar: false,
+    eventPlanning: false,
     selectActiveTask: false,
     pushNotificationsEnabled: false,
     perProject: false,
     perPulse: false,
     perTask: false,
+    diagnosticCssSetPropertyPatch: true,
+    diagnosticHeaderDomPatch: true,
+    diagnosticEventPlanningObserver: true,
+    diagnosticDarkThemeStyles: true,
+    diagnosticRulesHooks: true,
+    diagnosticTaskProjectGitWatcher: true,
+    diagnosticChatPanel: true,
+    diagnosticBaseStyles: true,
 });
 
 export const DEFAULT_LOCAL_SETTINGS = Object.freeze({
     [STORAGE_KEYS.ENABLE_FEATURES]: false,
     [STORAGE_KEYS.ADVANCED_SETTINGS]: false,
+    [STORAGE_KEYS.TRICK_DEBUG_LOGGING]: false,
 });

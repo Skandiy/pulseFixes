@@ -78,10 +78,81 @@
         }
     }
 
+    /* Оба фрейма всегда на странице, переключение — кроссфейдом по прозрачности */
     iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
         width: 100%;
         height: 100%;
-        border: none
+        border: none;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease;
+    }
+
+    iframe.active {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    /* Во время ресайза фреймы не перехватывают события мыши */
+    &.pulseFixesChatResizing iframe {
+        pointer-events: none !important;
+    }
+
+    /* Переключатель примыкает к полосе, текст — вертикально вдоль неё, проявляется при наведении */
+    #pulseFixesChat-switcher {
+        position: absolute;
+        top: 12px;
+        right: 100%;
+        margin-right: -2px;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 5px;
+        border-radius: 14px 0 0 14px;
+        background: hsl(from var(--v-primary-darken4) h s l/0.85);
+        backdrop-filter: blur(6px);
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+        opacity: 0;
+        pointer-events: none;
+        transform: translateX(8px);
+        transition: opacity 0.25s, transform 0.25s;
+
+        button {
+            writing-mode: vertical-rl;
+            border: none;
+            background: transparent;
+            color: white;
+            font: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            line-height: 1;
+            letter-spacing: 1px;
+            padding: 18px 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: background 0.2s, opacity 0.2s;
+
+            &:hover {
+                opacity: 1;
+            }
+
+            &.active {
+                background: var(--v-primary-base);
+                opacity: 1;
+            }
+        }
+    }
+
+    #pulseFixesChat-resizerHover:hover #pulseFixesChat-switcher {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateX(0);
     }
 }
 
@@ -201,4 +272,18 @@
 
 .v-overlay--active {
     transform: translateY(48px);
+}
+
+/* Зеркало переключателя для левого дока */
+.leftSide #pulseFixesChat-switcher {
+    right: auto;
+    left: 100%;
+    margin-right: 0;
+    margin-left: -2px;
+    border-radius: 0 14px 14px 0;
+    transform: translateX(-8px);
+}
+
+.leftSide #pulseFixesChat-resizerHover:hover #pulseFixesChat-switcher {
+    transform: translateX(0);
 }
