@@ -4,6 +4,7 @@ export function createPopupState() {
         storageSettings: {},
         currentEnabledFeatures: false,
         advancedSettingsVisible: false,
+        activeSettingsPage: 'root',
     };
 }
 
@@ -12,11 +13,15 @@ export function haveSettingsChanged(pageSettings, storageSettings) {
         return false;
     }
 
-    const {
-        advancedSettings,
-        enableFeatures,
-        ...pageComparableSettings
-    } = pageSettings;
+    const getComparableSettings = (settings) => {
+        const {
+            advancedSettings,
+            enableFeatures,
+            ...comparableSettings
+        } = settings || {};
 
-    return JSON.stringify(pageComparableSettings) !== JSON.stringify(storageSettings);
+        return comparableSettings;
+    };
+
+    return JSON.stringify(getComparableSettings(pageSettings)) !== JSON.stringify(getComparableSettings(storageSettings));
 }

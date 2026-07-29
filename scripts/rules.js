@@ -5,46 +5,195 @@ var sprint = null;
     const _stringify = JSON.stringify;
 
     const _originalJson = Response.prototype.json;
+    const DEBUG_STORAGE_KEY = 'TRICK_DEBUG_LOGGING';
+    const DEBUG_STORAGE_LIMIT_PER_KEY = 5;
+    const pendingRequestsByTaskId = new Map();
 
     let userId = null;
 
+    function isDebugLoggingEnabled() {
+        const value = localStorage.getItem(DEBUG_STORAGE_KEY);
+        return value === '1' || value === 'true';
+    }
+
+    function generateRequestTaskId() {
+        if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+            return window.crypto.randomUUID();
+        }
+
+        const buffer = new Uint8Array(16);
+        window.crypto.getRandomValues(buffer);
+        buffer[6] = (buffer[6] & 0x0f) | 0x40;
+        buffer[8] = (buffer[8] & 0x3f) | 0x80;
+
+        const hex = Array.from(buffer, (byte) => byte.toString(16).padStart(2, '0'));
+        return [
+            hex.slice(0, 4).join(''),
+            hex.slice(4, 6).join(''),
+            hex.slice(6, 8).join(''),
+            hex.slice(8, 10).join(''),
+            hex.slice(10, 16).join(''),
+        ].join('-');
+    }
+
+    function isObject(value) {
+        return value && typeof value === 'object' && !Array.isArray(value);
+    }
+
+    function isPulseTasksPayload(value) {
+        return isObject(value) && Array.isArray(value.tasks) && value.tasks.length > 0;
+    }
+
+    function buildTaskStorageKey(task) {
+        const objectName = typeof task?.objectName === 'string' && task.objectName
+            ? task.objectName
+            : 'unknown';
+        const methodName = typeof task?.methodName === 'string' && task.methodName
+            ? task.methodName
+            : 'unknown';
+        return `${objectName}_${methodName}`;
+    }
+
+    function safeCloneForStorage(value) {
+        if (value == null) {
+            return value;
+        }
+
+        try {
+            return _parse(_stringify(value));
+        } catch (_) {
+            return null;
+        }
+    }
+
+    function readDebugLogStorage() {
+        try {
+            const rawValue = localStorage.getItem(DEBUG_STORAGE_KEY);
+
+            if (!rawValue) {
+                return {};
+            }
+
+            const parsed = _parse(rawValue);
+            return isObject(parsed) ? parsed : {};
+        } catch (_) {
+            return {};
+        }
+    }
+
+    function writeDebugLogStorage(value) {
+        try {
+            localStorage.setItem(DEBUG_STORAGE_KEY, _stringify(value));
+        } catch (error) {
+            console.error('Не удалось сохранить API debug лог:', error);
+        }
+    }
+
+    function registerPendingPayload(payload) {
+        if (!isDebugLoggingEnabled()) {
+            return;
+        }
+
+        if (!isPulseTasksPayload(payload)) {
+            return;
+        }
+
+        payload.tasks.forEach((task) => {
+            if (!isObject(task)) {
+                return;
+            }
+
+            if (!task.id) {
+                task.id = generateRequestTaskId();
+            }
+
+            pendingRequestsByTaskId.set(task.id, {
+                taskId: task.id,
+                storageKey: buildTaskStorageKey(task),
+                createdAt: new Date().toISOString(),
+                request: {
+                    body: safeCloneForStorage(payload),
+                    task: safeCloneForStorage(task),
+                },
+            });
+        });
+    }
+
+    function persistMatchedResponse(task, parsedResponse) {
+        if (!isDebugLoggingEnabled()) {
+            return;
+        }
+
+        const taskId = task?.id;
+
+        if (!taskId || !pendingRequestsByTaskId.has(taskId)) {
+            return;
+        }
+
+        const pending = pendingRequestsByTaskId.get(taskId);
+        const storage = readDebugLogStorage();
+        const storageKey = pending.storageKey || buildTaskStorageKey(task);
+        const records = Array.isArray(storage[storageKey]) ? storage[storageKey] : [];
+
+        records.push({
+            taskId,
+            createdAt: pending.createdAt,
+            completedAt: new Date().toISOString(),
+            request: {
+                body: pending.request.body
+            },
+            response: {
+                body: safeCloneForStorage(parsedResponse)
+            },
+        });
+
+        while (records.length > DEBUG_STORAGE_LIMIT_PER_KEY) {
+            records.shift();
+        }
+
+        storage[storageKey] = records;
+        writeDebugLogStorage(storage);
+        pendingRequestsByTaskId.delete(taskId);
+    }
+
     getPulseSettings()
         .then((settings) => {
+            const needsAdvancedHooks = Boolean(settings.advancedSettings);
+            const needsNotificationHooks = Boolean(settings.pushNotificationsEnabled);
+            const needsActiveTaskHooks = Boolean(settings.selectActiveTask);
+            const needsDebugHooks = isDebugLoggingEnabled();
+
+            if (!needsAdvancedHooks && !needsNotificationHooks && !needsActiveTaskHooks && !needsDebugHooks) {
+                return;
+            }
+
             let customParse = function (arg) {
                 let parsed = _parse(arg);
 
-                if (parsed.tasks && parsed.tasks?.[0] && parsed.tasks[0].result && parsed.tasks[0].result['пользовательНомерЗаписи']) {
+                if (!isObject(parsed)) {
+                    return parsed;
+                }
+
+                if (needsActiveTaskHooks && parsed.tasks && parsed.tasks?.[0] && parsed.tasks[0].result && parsed.tasks[0].result['пользовательНомерЗаписи']) {
                     userId = parsed.tasks[0].result['пользовательНомерЗаписи'];
                 }
 
-                if (parsed.tasks && parsed.tasks?.[0] && parsed.tasks[0].result && parsed.tasks[0].result[0] && parsed.tasks[0].result[0].byDefault && parsed.tasks[0].result[0].id) {
+                if (needsActiveTaskHooks && parsed.tasks && parsed.tasks?.[0] && parsed.tasks[0].result && parsed.tasks[0].result[0] && parsed.tasks[0].result[0].byDefault && parsed.tasks[0].result[0].id) {
                     sprint = parsed.tasks[0].result[0].id;
                 }
 
-                if (settings.advancedSettings) {
-                    // deprecated Выдача глобальных прав права
-                    if (parsed.data && parsed.data.authentication && parsed.data.authentication.frontendPermissionsForActiveUser) {
-                        parsed.data.authentication.frontendPermissionsForActiveUser.map((perm) => {
-                            if (settings.perPulse) {
-                                perm.option = "ALLOWED";
-                            } else {
-                                // Права на редактирование проекта
-                                if (settings.perProject && perm.name === 'pulse/projects/:id') {
-                                    perm.option = "ALLOWED";
-                                }
-                                // Права на ретроспективу сотрудников
-                                if (perm.name === 'pulse/analytics/retrospective/employees.*') {
-                                    perm.option = "ALLOWED";
-                                }
-                            }
-                            return perm
-                        });
+                if (needsAdvancedHooks) {
+                    // Делает тебя админом
+                    if (parsed.tasks && parsed.tasks[0] && parsed.tasks[0].result && parsed.tasks[0].result.permissions) {
+                        let tmp = JSON.parse(parsed.tasks[0].result.permissions)
+                        parsed.tasks[0].result.sections.forEach((per) => {
+                            tmp.push(per+'.view')
+                            tmp.push(per+'.create')
+                            tmp.push(per+'.edit')
+                        })
+                        parsed.tasks[0].result.permissions = JSON.stringify(tmp);
                     }
 
-                    // deprecated Делает тебя админом
-                    if (parsed.tasks && parsed.tasks[0] && parsed.tasks[0].result && parsed.tasks[0].result['пользовательФИО']) {
-                        parsed.tasks[0].result['супервизор'] = 1;
-                    }
 
                     // Дает права на проекте
                     if (settings.perProject && parsed.tasks && parsed.tasks[0] && parsed.tasks[0].result && parsed.tasks[0].result['поля'] && parsed.tasks[0].result['поля'].indexOf('праваредактирование') === 33) {
@@ -73,7 +222,7 @@ var sprint = null;
                 }
 
                 // Ловим уведомления и показываем push
-                if (settings.pushNotificationsEnabled && !!parsed.id && parsed.payload && parsed.payload.data && parsed.payload.data.userMessages && parsed.payload.data.userMessages.messages) {
+                if (needsNotificationHooks && !!parsed.id && parsed.payload && parsed.payload.data && parsed.payload.data.userMessages && parsed.payload.data.userMessages.messages) {
                     for (const message of parsed.payload.data.userMessages.messages) {
                         try {
                             showLocalNotification(message.payload.id, message.payload);
@@ -84,7 +233,7 @@ var sprint = null;
                 }
 
                 // Выделение активной задачи
-                if (settings.selectActiveTask && parsed.tasks && parsed.tasks[1] && parsed.tasks[1].result && parsed.tasks[1].result.sprint && parsed.tasks[1].result['sprint'][0] && parsed.tasks[1].result['sprint'][0]['задачи'] && parsed.tasks[1].result['sprint'][0]['задачи'].length > 0) {
+                if (needsActiveTaskHooks && parsed.tasks && parsed.tasks[1] && parsed.tasks[1].result && parsed.tasks[1].result.sprint && parsed.tasks[1].result['sprint'][0] && parsed.tasks[1].result['sprint'][0]['задачи'] && parsed.tasks[1].result['sprint'][0]['задачи'].length > 0) {
                     let activeId = null;
                     const tasks = parsed.tasks[1].result['sprint'][0]['задачи'];
 
@@ -134,10 +283,16 @@ var sprint = null;
                     });
                 }
 
+                if (Array.isArray(parsed?.tasks)) {
+                    parsed.tasks.forEach((task) => {
+                        persistMatchedResponse(task, parsed);
+                    });
+                }
+
                 return parsed;
             };
             let customStringify = function (arg, replacer, space) {
-                if (settings?.selectActiveTask && userId !== null && sprint !== null) {
+                if (needsActiveTaskHooks && userId !== null && sprint !== null) {
                     if (arg?.tasks?.[0]?.objectName === 'МояСтраница.МоиЗадачи') {
                         const t = {
                             "objectName": "Бэклог",
@@ -183,13 +338,15 @@ var sprint = null;
                 //     }
                 // }
 
+                registerPendingPayload(arg);
+
                 return _stringify(arg, replacer, space);
             };
 
             let customJson = async function () {
                 const parsed = await _originalJson.call(this);
 
-                if (settings.advancedSettings) {
+                if (needsAdvancedHooks) {
                     // Выдача глобальных прав права
                     if (parsed.principal && parsed.principal.authorities) {
                         parsed.principal.authorities.map((perm) => {
@@ -215,14 +372,27 @@ var sprint = null;
                     }
                 }
 
+                if (Array.isArray(parsed?.tasks)) {
+                    parsed.tasks.forEach((task) => {
+                        persistMatchedResponse(task, parsed);
+                    });
+                }
+
                 // можно изменить результат
                 return parsed;
             };
 
-            JSON.parse = customParse;
-            JSON.stringify = customStringify;
+            if (needsAdvancedHooks || needsNotificationHooks || needsActiveTaskHooks || needsDebugHooks) {
+                JSON.parse = customParse;
+            }
 
-            Response.prototype.json = customJson;
+            if (needsActiveTaskHooks || needsDebugHooks) {
+                JSON.stringify = customStringify;
+            }
+
+            if (needsAdvancedHooks || needsDebugHooks) {
+                Response.prototype.json = customJson;
+            }
 
         })
         .catch((err) => {

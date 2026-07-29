@@ -16,54 +16,143 @@
             </div>
 
             <div id="settings">
-                <div class="title-block">Настройка отображения</div>
-                <div class="list">
-                    <div class="block">
-                        <label for="changeTheme">Кнопка смены темы оформления</label>
-                        <input id="changeTheme" type="checkbox"/>
-                    </div>
-                    <div class="block">
-                        <label for="changeCalendar">Измененный календарь</label>
-                        <input id="changeCalendar" type="checkbox"/>
-                    </div>
-                    <div class="block">
-                        <label for="selectActiveTask">Выделять активную задачу</label>
-                        <input id="selectActiveTask" type="checkbox"/>
-                    </div>
-                </div>
+                <div class="settings-router">
+                    <section class="settings-page active" data-settings-page="root">
+                        <div class="title-block">Категории</div>
+                        <div class="list category-list">
+                            <button class="category-button" type="button" data-open-page="display">
+                                <span>Настройки отображения</span>
+                                <span class="category-chevron">›</span>
+                            </button>
+                            <button class="category-button" type="button" data-open-page="notifications">
+                                <span>Настройки уведомлений</span>
+                                <span class="category-chevron">›</span>
+                            </button>
+                            <button class="category-button" type="button" data-open-page="integrations">
+                                <span>Интеграции</span>
+                                <span class="category-chevron">›</span>
+                            </button>
+                            <button class="category-button" type="button" data-open-page="diagnostics">
+                                <span>Диагностика</span>
+                                <span class="category-chevron">›</span>
+                            </button>
+                        </div>
+                    </section>
 
-                <div class="title-block">Уведомления</div>
-                <div class="list">
-                    <div class="block">
-                        <label for="pushNotificationsEnabled">Push уведомления</label>
-                        <input id="pushNotificationsEnabled" type="checkbox"/>
-                    </div>
-                </div>
+                    <section class="settings-page" data-settings-page="display">
+                        <div class="settings-page-header">
+                            <button class="back-button" type="button" data-back-page="root">‹</button>
+                            <div class="settings-page-title">Настройки отображения</div>
+                        </div>
+                        <div class="list">
+                            <div class="block">
+                                <label for="changeTheme">Кнопка смены темы оформления</label>
+                                <input id="changeTheme" type="checkbox"/>
+                            </div>
+                            <div class="block">
+                                <label for="changeCalendar">Измененный календарь</label>
+                                <input id="changeCalendar" type="checkbox"/>
+                            </div>
+                            <div class="block">
+                                <label for="eventPlanning">Планирование мероприятий</label>
+                                <input id="eventPlanning" type="checkbox"/>
+                            </div>
+                            <div class="block">
+                                <label for="selectActiveTask">Выделять активную задачу</label>
+                                <input id="selectActiveTask" type="checkbox"/>
+                            </div>
+                        </div>
+                    </section>
 
-                <div class="title-block advancedSettings">Настройка прав</div>
-                <div class="list advancedSettings">
-                    <div class="block">
-                        <label for="perProject">Добавление ссылок на Git</label>
-                        <input id="perProject" type="checkbox"/>
-                    </div>
-                    <div class="block">
-                        <label for="perPulse">Шестеренка (создание тегов)</label>
-                        <input id="perPulse" type="checkbox"/>
-                    </div>
-                    <div class="block">
-                        <label for="perTask">Отображать скрытые поля в задачах</label>
-                        <input id="perTask" type="checkbox"/>
-                    </div>
-                </div>
+                    <section class="settings-page" data-settings-page="notifications">
+                        <div class="settings-page-header">
+                            <button class="back-button" type="button" data-back-page="root">‹</button>
+                            <div class="settings-page-title">Настройки уведомлений</div>
+                        </div>
+                        <div class="list">
+                            <div class="block">
+                                <label for="pushNotificationsEnabled">Push уведомления</label>
+                                <input id="pushNotificationsEnabled" type="checkbox"/>
+                            </div>
+                        </div>
+                    </section>
 
-                <div class="title-block advancedSettings">Интеграции</div>
-                <div class="list advancedSettings">
-                    <div class="block">
-                        <button id="syncCalendar">Синхронизировать календарь</button>
-                    </div>
-                    <div class="block">
-                        <a id="calendarIosLink"></a>
-                    </div>
+                    <section class="settings-page" data-settings-page="integrations">
+                        <div class="settings-page-header">
+                            <button class="back-button" type="button" data-back-page="root">‹</button>
+                            <div class="settings-page-title">Интеграции</div>
+                        </div>
+                        <div class="title-block advancedSettings">Настройка прав</div>
+                        <div class="list advancedSettings">
+                            <div class="block">
+                                <label for="perProject">Добавление ссылок на Git</label>
+                                <input id="perProject" type="checkbox"/>
+                            </div>
+                            <div class="block">
+                                <label for="perPulse">Шестеренка (создание тегов)</label>
+                                <input id="perPulse" type="checkbox"/>
+                            </div>
+                            <div class="block">
+                                <label for="perTask">Отображать скрытые поля в задачах</label>
+                                <input id="perTask" type="checkbox"/>
+                            </div>
+                        </div>
+
+                        <div class="title-block advancedSettings">Календарь</div>
+                        <div class="list advancedSettings">
+                            <div class="block">
+                                <button id="syncCalendar">Синхронизировать календарь</button>
+                            </div>
+                            <div class="block">
+                                <a id="calendarIosLink"></a>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="settings-page" data-settings-page="diagnostics">
+                        <div class="settings-page-header">
+                            <button class="back-button" type="button" data-back-page="root">‹</button>
+                            <div class="settings-page-title">Диагностика</div>
+                        </div>
+                        <div class="list">
+                            <div class="block">
+                                <label for="diagnosticCssSetPropertyPatch">CSS setProperty hook</label>
+                                <input id="diagnosticCssSetPropertyPatch" type="checkbox"/>
+                            </div>
+                            <div class="block">
+                                <label for="diagnosticHeaderDomPatch">DOM hook кнопок шапки</label>
+                                <input id="diagnosticHeaderDomPatch" type="checkbox"/>
+                            </div>
+                            <div class="block">
+                                <label for="diagnosticEventPlanningObserver">Observer графика</label>
+                                <input id="diagnosticEventPlanningObserver" type="checkbox"/>
+                            </div>
+                            <div class="block">
+                                <label for="diagnosticDarkThemeStyles">CSS темной темы</label>
+                                <input id="diagnosticDarkThemeStyles" type="checkbox"/>
+                            </div>
+                            <div class="block">
+                                <label for="diagnosticRulesHooks">JSON/API hooks правил</label>
+                                <input id="diagnosticRulesHooks" type="checkbox"/>
+                            </div>
+                            <div class="block">
+                                <label for="trickDebugLogging">TRICK debug logging</label>
+                                <input id="trickDebugLogging" type="checkbox"/>
+                            </div>
+                            <div class="block">
+                                <label for="diagnosticTaskProjectGitWatcher">IDE watcher</label>
+                                <input id="diagnosticTaskProjectGitWatcher" type="checkbox"/>
+                            </div>
+                            <div class="block">
+                                <label for="diagnosticChatPanel">Чат и iframe</label>
+                                <input id="diagnosticChatPanel" type="checkbox"/>
+                            </div>
+                            <div class="block">
+                                <label for="diagnosticBaseStyles">Базовые CSS расширения</label>
+                                <input id="diagnosticBaseStyles" type="checkbox"/>
+                            </div>
+                        </div>
+                    </section>
                 </div>
             </div>
 

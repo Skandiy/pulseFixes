@@ -32,6 +32,7 @@ export async function getLocalSettings() {
     const stored = await storageGet('local', [
         STORAGE_KEYS.ENABLE_FEATURES,
         STORAGE_KEYS.ADVANCED_SETTINGS,
+        STORAGE_KEYS.TRICK_DEBUG_LOGGING,
     ]);
 
     return {

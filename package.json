@@ -1,0 +1,19 @@
+{
+  "name": "pulse-plus-extension",
+  "version": "4.0.4",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:event-planning": "vite build",
+    "typecheck:event-planning": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "@tanstack/vue-query": "^5.74.0",
+    "@vitejs/plugin-vue": "^5.2.4",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "vue": "^3.5.13",
+    "vue-tsc": "^2.2.10"
+  },
+  "devDependencies": {}
+}

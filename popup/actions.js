@@ -1,5 +1,5 @@
 import { MESSAGE_TYPES, STORAGE_KEYS, URLS } from '../src/shared-constants.js';
-import { getExtensionSettings, getSyncSettings, setLocalSetting, setSyncSetting } from '../src/shared-settings.js';
+import { getExtensionSettings, setLocalSetting, setSyncSetting } from '../src/shared-settings.js';
 import { getCurrentTab, sendTabMessage } from '../src/shared-messaging.js';
 import { syncCalendar } from './calendarSync.js';
 import { haveSettingsChanged } from './state.js';
@@ -9,6 +9,7 @@ import {
     setAdvancedVisibility,
     setReloadNoticeVisibility,
     setSettingsVisibility,
+    showSettingsPage,
 } from './ui.js';
 
 async function requestPageSettings(tabId) {
@@ -49,16 +50,16 @@ export async function initializePopup(state, elements) {
     renderManifestInfo(elements, chrome.runtime.getManifest());
 
     const extensionSettings = await getExtensionSettings();
-    const syncSettings = await getSyncSettings();
 
-    state.storageSettings = syncSettings;
+    state.storageSettings = extensionSettings;
     state.currentEnabledFeatures = Boolean(extensionSettings.enableFeatures);
     state.advancedSettingsVisible = Boolean(extensionSettings.advancedSettings);
 
     elements.enableFeatures.checked = state.currentEnabledFeatures;
-    applyCheckboxValues(elements.checkboxes, syncSettings);
+    applyCheckboxValues(elements.checkboxes, extensionSettings);
     setSettingsVisibility(elements, state.currentEnabledFeatures);
     setAdvancedVisibility(elements, state.advancedSettingsVisible);
+    showSettingsPage(elements, state.activeSettingsPage, { animate: false });
 }
 
 export function bindPopupEvents(state, elements) {
@@ -78,6 +79,10 @@ export function bindPopupEvents(state, elements) {
         await setLocalSetting(STORAGE_KEYS.ENABLE_FEATURES, enabled);
 
         setSettingsVisibility(elements, enabled);
+        if (enabled) {
+            state.activeSettingsPage = 'root';
+            showSettingsPage(elements, state.activeSettingsPage, { animate: false });
+        }
 
         if (state.currentEnabledFeatures !== enabled) {
             setReloadNoticeVisibility(elements, true);
@@ -92,11 +97,39 @@ export function bindPopupEvents(state, elements) {
         setAdvancedVisibility(elements, true);
     }));
 
+    elements.openPageButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            const pageId = button.dataset.openPage;
+            if (!pageId) {
+                return;
+            }
+
+            state.activeSettingsPage = pageId;
+            showSettingsPage(elements, pageId, { direction: 'forward' });
+        });
+    });
+
+    elements.backButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            const pageId = button.dataset.backPage || 'root';
+            state.activeSettingsPage = pageId;
+            showSettingsPage(elements, pageId, { direction: 'back' });
+        });
+    });
+
     elements.checkboxes.forEach((checkbox) => {
         checkbox.addEventListener('change', async (event) => {
             const { id, checked } = event.target;
-            await setSyncSetting(id, checked);
-            state.storageSettings = await getSyncSettings();
+            if (id === STORAGE_KEYS.TRICK_DEBUG_LOGGING) {
+                await setLocalSetting(id, checked);
+                state.storageSettings = {
+                    ...state.storageSettings,
+                    [id]: checked,
+                };
+            } else {
+                await setSyncSetting(id, checked);
+                state.storageSettings = await getExtensionSettings();
+            }
             setReloadNoticeVisibility(elements, haveSettingsChanged(state.pageSettings, state.storageSettings));
         });
     });

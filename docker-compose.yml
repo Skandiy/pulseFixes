@@ -1,0 +1,11 @@
+services:
+  browser-extension-server:
+    image: nginx:alpine
+    container_name: browser-extension-server
+    restart: unless-stopped
+
+    ports:
+      - "39487:80"
+
+    volumes:
+      - ./public:/usr/share/nginx/html:ro
