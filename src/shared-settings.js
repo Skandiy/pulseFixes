@@ -33,6 +33,7 @@ export async function getLocalSettings() {
         STORAGE_KEYS.ENABLE_FEATURES,
         STORAGE_KEYS.ADVANCED_SETTINGS,
         STORAGE_KEYS.TRICK_DEBUG_LOGGING,
+        STORAGE_KEYS.WORKLOAD_PLAN_OVERRIDE,
     ]);
 
     return {

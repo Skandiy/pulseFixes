@@ -15,6 +15,7 @@ export const STORAGE_KEYS = Object.freeze({
     ENABLE_FEATURES: 'enableFeatures',
     ADVANCED_SETTINGS: 'advancedSettings',
     TRICK_DEBUG_LOGGING: 'trickDebugLogging',
+    WORKLOAD_PLAN_OVERRIDE: 'workloadPlanOverride',
 });
 
 export const URLS = Object.freeze({
@@ -27,6 +28,7 @@ export const DEFAULT_SYNC_SETTINGS = Object.freeze({
     changeCalendar: false,
     eventPlanning: false,
     selectActiveTask: false,
+    workloadPlanMarker: true,
     pushNotificationsEnabled: false,
     perProject: false,
     perPulse: false,
@@ -45,4 +47,6 @@ export const DEFAULT_LOCAL_SETTINGS = Object.freeze({
     [STORAGE_KEYS.ENABLE_FEATURES]: false,
     [STORAGE_KEYS.ADVANCED_SETTINGS]: false,
     [STORAGE_KEYS.TRICK_DEBUG_LOGGING]: false,
+    // null — отметка плана считается автоматически, число — заданные вручную часы
+    [STORAGE_KEYS.WORKLOAD_PLAN_OVERRIDE]: null,
 });

@@ -50,6 +50,10 @@
     {
       "key": "changeCalendar",
       "value": "styles/calendar.css"
+    },
+    {
+      "key": "workloadPlanMarker",
+      "value": "styles/mainPage.css"
     }
   ]
 }

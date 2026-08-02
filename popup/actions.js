@@ -46,6 +46,25 @@ function buildAdvancedSettingsUnlock(onUnlocked) {
     };
 }
 
+function formatPlanOverride(value) {
+    return typeof value === 'number' && Number.isFinite(value) ? String(value) : '';
+}
+
+/**
+ * Пустое поле — отметка плана считается автоматически, число — ручное значение для проверки подсветки.
+ */
+function parsePlanOverride(rawValue) {
+    const trimmed = String(rawValue ?? '').trim().replace(',', '.');
+
+    if (!trimmed) {
+        return null;
+    }
+
+    const hours = Number(trimmed);
+
+    return Number.isFinite(hours) && hours >= 0 ? hours : undefined;
+}
+
 export async function initializePopup(state, elements) {
     renderManifestInfo(elements, chrome.runtime.getManifest());
 
@@ -57,6 +76,9 @@ export async function initializePopup(state, elements) {
 
     elements.enableFeatures.checked = state.currentEnabledFeatures;
     applyCheckboxValues(elements.checkboxes, extensionSettings);
+    elements.workloadPlanOverride.value = formatPlanOverride(
+        extensionSettings[STORAGE_KEYS.WORKLOAD_PLAN_OVERRIDE]
+    );
     setSettingsVisibility(elements, state.currentEnabledFeatures);
     setAdvancedVisibility(elements, state.advancedSettingsVisible);
     showSettingsPage(elements, state.activeSettingsPage, { animate: false });
@@ -132,6 +154,30 @@ export function bindPopupEvents(state, elements) {
             }
             setReloadNoticeVisibility(elements, haveSettingsChanged(state.pageSettings, state.storageSettings));
         });
+    });
+
+    async function savePlanOverride(state, elements, hours) {
+        await setLocalSetting(STORAGE_KEYS.WORKLOAD_PLAN_OVERRIDE, hours);
+        state.storageSettings = await getExtensionSettings();
+        setReloadNoticeVisibility(elements, haveSettingsChanged(state.pageSettings, state.storageSettings));
+    }
+
+    elements.workloadPlanOverride.addEventListener('change', async (event) => {
+        const hours = parsePlanOverride(event.target.value);
+
+        if (hours === undefined) {
+            event.target.value = formatPlanOverride(
+                state.storageSettings[STORAGE_KEYS.WORKLOAD_PLAN_OVERRIDE]
+            );
+            return;
+        }
+
+        await savePlanOverride(state, elements, hours);
+    });
+
+    elements.resetWorkloadPlanOverrideButton.addEventListener('click', async () => {
+        elements.workloadPlanOverride.value = '';
+        await savePlanOverride(state, elements, null);
     });
 
     elements.syncCalendarButton.addEventListener('click', async () => {

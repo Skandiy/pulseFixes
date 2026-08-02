@@ -61,6 +61,10 @@
                                 <label for="selectActiveTask">Выделять активную задачу</label>
                                 <input id="selectActiveTask" type="checkbox"/>
                             </div>
+                            <div class="block">
+                                <label for="workloadPlanMarker">Отметка плана в трудозатратах</label>
+                                <input id="workloadPlanMarker" type="checkbox"/>
+                            </div>
                         </div>
                     </section>
 
@@ -150,6 +154,15 @@
                             <div class="block">
                                 <label for="diagnosticBaseStyles">Базовые CSS расширения</label>
                                 <input id="diagnosticBaseStyles" type="checkbox"/>
+                            </div>
+                            <div class="block">
+                                <label for="workloadPlanOverride">
+                                    Отметка плана, ч
+                                    <input id="workloadPlanOverride" type="number" min="0" step="0.5" placeholder="авто"/>
+                                </label>
+                            </div>
+                            <div class="block">
+                                <button id="resetWorkloadPlanOverride">Вернуть автоматическую отметку</button>
                             </div>
                         </div>
                     </section>

@@ -13,6 +13,8 @@ export function getPopupElements() {
         openPageButtons: Array.from(document.querySelectorAll('[data-open-page]')),
         backButtons: Array.from(document.querySelectorAll('[data-back-page]')),
         syncCalendarButton: document.getElementById('syncCalendar'),
+        workloadPlanOverride: document.getElementById('workloadPlanOverride'),
+        resetWorkloadPlanOverrideButton: document.getElementById('resetWorkloadPlanOverride'),
         checkboxes: Array.from(document.querySelectorAll('#settings input[type="checkbox"]')),
         advancedBlocks: Array.from(document.querySelectorAll('.advancedSettings')),
     };
