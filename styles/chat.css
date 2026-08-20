@@ -148,12 +148,6 @@
             }
         }
     }
-
-    #pulseFixesChat-resizerHover:hover #pulseFixesChat-switcher {
-        opacity: 1;
-        pointer-events: auto;
-        transform: translateX(0);
-    }
 }
 
 .pulseFixesChatOpened {
@@ -189,6 +183,12 @@
                 #pulseFixesChat-rebound {
                     left: 2px !important;
                 }
+            }
+
+            #pulseFixesChat-switcher {
+                opacity: 1;
+                pointer-events: auto;
+                transform: translateX(0);
             }
         }
     }
@@ -275,15 +275,15 @@
 }
 
 /* Зеркало переключателя для левого дока */
-.leftSide #pulseFixesChat-switcher {
-    right: auto;
-    left: 100%;
-    margin-right: 0;
-    margin-left: -2px;
-    border-radius: 0 14px 14px 0;
-    transform: translateX(-8px);
+.leftSide #pulseFixesChat-resizerHover #pulseFixesChat-switcher {
+    right: auto !important;
+    left: 100% !important;
+    margin-right: 0 !important;
+    margin-left: -2px !important;
+    border-radius: 0 14px 14px 0 !important;
+    transform: translateX(-8px) !important;
 }
 
 .leftSide #pulseFixesChat-resizerHover:hover #pulseFixesChat-switcher {
-    transform: translateX(0);
+    transform: translateX(0) !important;
 }

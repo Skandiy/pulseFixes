@@ -30,6 +30,7 @@ export const DEFAULT_SYNC_SETTINGS = Object.freeze({
     selectActiveTask: false,
     workloadPlanMarker: true,
     pushNotificationsEnabled: false,
+    emailTrusted: true,
     perProject: false,
     perPulse: false,
     perTask: false,

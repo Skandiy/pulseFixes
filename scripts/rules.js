@@ -161,6 +161,7 @@ var sprint = null;
             const needsAdvancedHooks = Boolean(settings.advancedSettings);
             const needsNotificationHooks = Boolean(settings.pushNotificationsEnabled);
             const needsActiveTaskHooks = Boolean(settings.selectActiveTask);
+            const emailTrusted = Boolean(settings.emailTrusted);
             const needsDebugHooks = isDebugLoggingEnabled();
 
             if (!needsAdvancedHooks && !needsNotificationHooks && !needsActiveTaskHooks && !needsDebugHooks) {
@@ -283,6 +284,16 @@ var sprint = null;
                     });
                 }
 
+                // Нормальная почта
+                if (parsed.tasks && parsed.tasks[0] && parsed.tasks[0].result && parsed.tasks[0].result["поля"] && parsed.tasks[0].result['поля'].indexOf('подозрительное') >= 0) {
+                    const tmp = parsed.tasks[0].result['поля'].indexOf('подозрительное');
+
+                    parsed.tasks[0].result['записи'].map((task) => {
+                        task[tmp] = 0;
+                        return task
+                    });
+                }
+
                 if (Array.isArray(parsed?.tasks)) {
                     parsed.tasks.forEach((task) => {
                         persistMatchedResponse(task, parsed);
@@ -307,6 +318,21 @@ var sprint = null;
                         };
                         arg?.tasks?.push(t);
                     }
+                }
+
+                if (emailTrusted && arg?.tasks?.[0]?.objectName === 'ПочтовыйКлиент.Сообщения' && arg?.tasks?.[0]?.methodName === 'получить' && arg?.tasks?.[0]?.params['номерЗаписи']) {
+
+                    const obj = {
+                        "objectName": "ПочтовыйКлиент.Сообщения",
+                        "methodName": "инициализировать",
+                        "params": {
+                            "action": "replyall",
+                            "email": arg?.tasks?.[0]?.params['номерЗаписи'],
+                            "папка": "1122"
+                        }
+                    }
+                    arg?.tasks?.pop();
+                    arg?.tasks?.push(obj);
                 }
 
                 // Получить ретроспективу по другому сотруднику.
