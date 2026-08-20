@@ -284,16 +284,6 @@ var sprint = null;
                     });
                 }
 
-                // Нормальная почта
-                if (parsed.tasks && parsed.tasks[0] && parsed.tasks[0].result && parsed.tasks[0].result["поля"] && parsed.tasks[0].result['поля'].indexOf('подозрительное') >= 0) {
-                    const tmp = parsed.tasks[0].result['поля'].indexOf('подозрительное');
-
-                    parsed.tasks[0].result['записи'].map((task) => {
-                        task[tmp] = 0;
-                        return task
-                    });
-                }
-
                 if (Array.isArray(parsed?.tasks)) {
                     parsed.tasks.forEach((task) => {
                         persistMatchedResponse(task, parsed);

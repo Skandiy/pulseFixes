@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "build:event-planning": "vite build",
-    "typecheck:event-planning": "vue-tsc --noEmit"
+    "typecheck:event-planning": "vue-tsc --noEmit",
+    "pack": "node tools/pack-extension.mjs",
+    "pack:fast": "node tools/pack-extension.mjs --skip-build"
   },
   "dependencies": {
     "@tanstack/vue-query": "^5.74.0",
