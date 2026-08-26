@@ -1,6 +1,6 @@
 {
-  "name": "pulse-plus-extension",
-  "version": "4.0.4",
+  "name": "trick-plus-extension",
+  "version": "5.0.0",
   "private": true,
   "type": "module",
   "scripts": {

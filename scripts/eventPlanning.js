@@ -15,8 +15,8 @@
     const SIDEBAR_SLID_ATTR = 'data-pulse-plus-event-planning-sidebar-slid';
     const MAIN_STYLE_BACKUP_ATTR = 'data-pulse-plus-event-planning-main-style';
     const RIPPLE_STYLE_ID = 'pulse-plus-event-planning-menu-ripple-style';
-    const ROUTE_EVENT = 'pulse-plus:event-planning-route-change';
-    const HISTORY_PATCH_FLAG = '__PULSE_PLUS_EVENT_PLANNING_HISTORY_PATCHED__';
+    const ROUTE_EVENT = 'trick-plus:event-planning-route-change';
+    const HISTORY_PATCH_FLAG = '__TRICK_PLUS_EVENT_PLANNING_HISTORY_PATCHED__';
     const LAYOUT_TRANSITION_MS = 180;
     const CALENDAR_EMBEDDED_CONTAINER_SELECTOR = 'main div .fill-viewport-height';
     const CALENDAR_SHELL_SELECTOR = 'main div .fill-viewport-height div div div';
@@ -964,8 +964,8 @@
     }
 
     function unmountMountedEventPlanningApp() {
-        if (mounted && window.PulsePlusEventPlanning) {
-            window.PulsePlusEventPlanning.unmount();
+        if (mounted && window.TrickPlusEventPlanning) {
+            window.TrickPlusEventPlanning.unmount();
         }
 
         mounted = false;
@@ -1027,7 +1027,7 @@
         try {
             const container = findCalendarEmbeddedContainer();
             if (!container) {
-                console.warn('[Pulse Plus] Calendar content container for event planning was not found');
+                console.warn('[Trick Plus] Calendar content container for event planning was not found');
                 return;
             }
 
@@ -1050,7 +1050,7 @@
             calendarNativeHashSuppressed = false;
 
             await assetsPromise;
-            if (!isOwnerCalendarRoute() || !calendarEmbeddedActive || !window.PulsePlusEventPlanning) {
+            if (!isOwnerCalendarRoute() || !calendarEmbeddedActive || !window.TrickPlusEventPlanning) {
                 return;
             }
             if (!root.isConnected) {
@@ -1073,13 +1073,13 @@
             }
 
             root.textContent = '';
-            window.PulsePlusEventPlanning.mount(root);
+            window.TrickPlusEventPlanning.mount(root);
             mounted = true;
             mountedMode = 'calendar';
             calendarEmbeddedRoot = root;
             scheduleCalendarNativeCleanup(root);
         } catch (error) {
-            console.error('[Pulse Plus] Embedded event planning page failed to mount:', error);
+            console.error('[Trick Plus] Embedded event planning page failed to mount:', error);
             if (root instanceof HTMLElement) {
                 root.textContent = 'Не удалось загрузить график. Выполните сборку расширения.';
             }
@@ -1268,7 +1268,7 @@
     }
 
     function ensureAssets() {
-        if (window.PulsePlusEventPlanning) {
+        if (window.TrickPlusEventPlanning) {
             return Promise.resolve();
         }
 
@@ -1281,7 +1281,7 @@
             script.src = extensionUrl('assets/event-planning.js');
             script.setAttribute('data-pulse-plus-event-planning-bundle', 'true');
             script.onload = () => {
-                if (window.PulsePlusEventPlanning) {
+                if (window.TrickPlusEventPlanning) {
                     resolve();
                     return;
                 }
@@ -1323,7 +1323,7 @@
 
         const container = findMainWrap();
         if (!container) {
-            console.warn('[Pulse Plus] Content container for event planning was not found');
+            console.warn('[Trick Plus] Content container for event planning was not found');
             return;
         }
 
@@ -1336,18 +1336,18 @@
 
         ensureAssets()
             .then(() => {
-                if (!isEventPlanningRoute() || !window.PulsePlusEventPlanning) {
+                if (!isEventPlanningRoute() || !window.TrickPlusEventPlanning) {
                     return;
                 }
                 if (!mounted) {
                     root.textContent = '';
-                    window.PulsePlusEventPlanning.mount(root);
+                    window.TrickPlusEventPlanning.mount(root);
                     mounted = true;
                     mountedMode = 'route';
                 }
             })
             .catch((error) => {
-                console.error('[Pulse Plus] Event planning page failed to mount:', error);
+                console.error('[Trick Plus] Event planning page failed to mount:', error);
                 root.textContent = 'Не удалось загрузить страницу планирования мероприятий. Выполните сборку расширения.';
             });
     }
@@ -1379,7 +1379,7 @@
         }
 
         void ensureAssets().catch((error) => {
-            console.error('[Pulse Plus] Event planning bundle preload failed:', error);
+            console.error('[Trick Plus] Event planning bundle preload failed:', error);
         });
     }
 

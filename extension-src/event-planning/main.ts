@@ -43,14 +43,14 @@ export function unmount(): void {
 
 declare global {
   interface Window {
-    PulsePlusEventPlanning?: {
+    TrickPlusEventPlanning?: {
       mount: typeof mount;
       unmount: typeof unmount;
     };
   }
 }
 
-window.PulsePlusEventPlanning = {
+window.TrickPlusEventPlanning = {
   mount,
   unmount
 };

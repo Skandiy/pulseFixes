@@ -38,7 +38,7 @@ export async function apiFetch<T>(url: string, init: RequestInit = {}): Promise<
 }
 
 export async function executePulseRequest(payload: KvplRequest): Promise<unknown> {
-  const id = `pulse-plus-event-planning:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+  const id = `trick-plus-event-planning:${Date.now()}:${Math.random().toString(36).slice(2)}`;
 
   return new Promise((resolve, reject) => {
     const timeoutId = window.setTimeout(() => {

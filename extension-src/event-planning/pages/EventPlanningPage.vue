@@ -168,7 +168,7 @@ const displayFilterItems: Array<{ value: DisplayFilterKey; title: string }> = [
 ];
 const allDisplayFilterValues = displayFilterItems.map((item) => item.value);
 const planningUrlParamNames = ['date', 'participants', 'duration', 'start', 'end', 'places', 'show'];
-const employeeInfoCacheStorageKey = 'pulsePlus.eventPlanning.employeeInfoCache.v1';
+const employeeInfoCacheStorageKey = 'trickPlus.eventPlanning.employeeInfoCache.v1';
 const calendarWeekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 const calendarMonthFormatter = new Intl.DateTimeFormat('ru-RU', { month: 'long' });
 const calendarTitleDateFormatter = new Intl.DateTimeFormat('ru-RU', { weekday: 'short', day: 'numeric', month: 'long' });
@@ -2172,7 +2172,7 @@ async function loadEmployeeAvatar(sourceUrl: string, entry: EmployeeAvatarCacheE
         employeeAvatarCache.delete(sourceUrl);
       }
     }
-    console.warn('[Pulse Plus] Employee avatar cache failed:', error);
+    console.warn('[Trick Plus] Employee avatar cache failed:', error);
   }
 }
 
@@ -2566,7 +2566,7 @@ function readCurrentPulseUser(): { employeeId: string; displayName: string } {
 
 function readStoredCurrentUser(): { employeeId: string; displayName: string } {
   const storageKeys = [
-    'pulsePlus.eventPlanning.currentUser',
+    'trickPlus.eventPlanning.currentUser',
     'pulse.currentUser',
     'currentUser',
     'user'

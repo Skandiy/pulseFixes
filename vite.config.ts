@@ -4,6 +4,8 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   plugins: [vue()],
+  // public/ хранит артефакты дистрибутива, а не веб-ассеты: копировать их в assets/ не нужно
+  publicDir: false,
   define: {
     'process.env.NODE_ENV': JSON.stringify('production')
   },
@@ -18,7 +20,7 @@ export default defineConfig({
     cssCodeSplit: true,
     lib: {
       entry: fileURLToPath(new URL('./extension-src/event-planning/main.ts', import.meta.url)),
-      name: 'PulsePlusEventPlanning',
+      name: 'TrickPlusEventPlanning',
       formats: ['iife'],
       fileName: () => 'event-planning.js',
       cssFileName: 'event-planning'

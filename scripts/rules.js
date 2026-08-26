@@ -5,14 +5,16 @@ var sprint = null;
     const _stringify = JSON.stringify;
 
     const _originalJson = Response.prototype.json;
-    const DEBUG_STORAGE_KEY = 'TRICK_DEBUG_LOGGING';
+    // Флаг включения и сам лог раньше жили под одним ключом и затирали друг друга
+    const DEBUG_ENABLED_STORAGE_KEY = 'trickPlus.debug.enabled';
+    const DEBUG_LOG_STORAGE_KEY = 'trickPlus.debug.log';
     const DEBUG_STORAGE_LIMIT_PER_KEY = 5;
     const pendingRequestsByTaskId = new Map();
 
     let userId = null;
 
     function isDebugLoggingEnabled() {
-        const value = localStorage.getItem(DEBUG_STORAGE_KEY);
+        const value = localStorage.getItem(DEBUG_ENABLED_STORAGE_KEY);
         return value === '1' || value === 'true';
     }
 
@@ -68,7 +70,7 @@ var sprint = null;
 
     function readDebugLogStorage() {
         try {
-            const rawValue = localStorage.getItem(DEBUG_STORAGE_KEY);
+            const rawValue = localStorage.getItem(DEBUG_LOG_STORAGE_KEY);
 
             if (!rawValue) {
                 return {};
@@ -83,7 +85,7 @@ var sprint = null;
 
     function writeDebugLogStorage(value) {
         try {
-            localStorage.setItem(DEBUG_STORAGE_KEY, _stringify(value));
+            localStorage.setItem(DEBUG_LOG_STORAGE_KEY, _stringify(value));
         } catch (error) {
             console.error('Не удалось сохранить API debug лог:', error);
         }

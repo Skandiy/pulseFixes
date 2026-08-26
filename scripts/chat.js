@@ -1,11 +1,16 @@
 (() => {
+    const CHAT_TAB_STORAGE_KEY = 'trickPlus.chat.tab';
+    const CHAT_WIDTH_STORAGE_KEY = 'trickPlus.chat.width';
+    const CHAT_OPENED_STORAGE_KEY = 'trickPlus.chat.opened';
+    const CHAT_LEFT_SIDE_STORAGE_KEY = 'trickPlus.chat.leftSide';
+
     // === Источники ===
     const TABS = {
         chat: "https://chat.sk-serv.ru/stack/",
         hippo: "https://hippo.stack-it.ru/",
     };
 
-    let activeTab = TABS[localStorage.getItem('PULSE_FIXES_CHAT_TAB')] ? localStorage.getItem('PULSE_FIXES_CHAT_TAB') : 'chat';
+    let activeTab = TABS[localStorage.getItem(CHAT_TAB_STORAGE_KEY)] ? localStorage.getItem(CHAT_TAB_STORAGE_KEY) : 'chat';
 
     // Оба фрейма грузятся сразу, чтобы при первом переключении контент был уже готов
     const iframeChat = document.createElement('iframe');
@@ -20,7 +25,7 @@
     div.id = 'pulseFixesChat';
     div.style.maxWidth = "1800px"; // максимальная
     div.style.minWidth = "400px"; // минимальная
-    div.style.width = (localStorage.getItem('PULSE_FIXES_CHAT_WIDTH') || 500) + "px";
+    div.style.width = (localStorage.getItem(CHAT_WIDTH_STORAGE_KEY) || 500) + "px";
     div.style.transform = "translateX("+div.style.width+")";
     div.append(iframeChat, iframeHippo);
 
@@ -87,10 +92,10 @@
 
     // === resize logic ===
     let isResizing = false;
-    let opened = localStorage.getItem('PULSE_FIXES_CHAT_OPENED') === '1';
+    let opened = localStorage.getItem(CHAT_OPENED_STORAGE_KEY) === '1';
     let currentSize = div.style.width.replace(/\D/g, '');
     let timeout = null;
-    let leftSide = localStorage.getItem('PULSE_FIXES_CHAT_LEFTSIDE') === '1';
+    let leftSide = localStorage.getItem(CHAT_LEFT_SIDE_STORAGE_KEY) === '1';
 
     resizer.addEventListener("mousedown", (e) => {
         e.preventDefault();
@@ -139,7 +144,7 @@
             isResizing = false;
             document.body.style.userSelect = "";
             currentSize = div.style.width.replace(/\D/g, '')
-            localStorage.setItem('PULSE_FIXES_CHAT_WIDTH', currentSize)
+            localStorage.setItem(CHAT_WIDTH_STORAGE_KEY, currentSize)
             div.classList.remove('pulseFixesChatResizing');
             document.body.style.pointerEvents = "auto";
             rebound.removeAttribute('style');
@@ -158,13 +163,13 @@
     const svg = '<svg aria-hidden="true" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" class="v-icon__svg"><path d="M20,2A2,2 0 0,1 22,4V16A2,2 0 0,1 20,18H6L2,22V4C2,2.89 2.9,2 4,2H20M4,4V17.17L5.17,16H20V4H4M6,7H18V9H6V7M6,11H15V13H6V11Z"></path></svg>'
 
     function registerHeaderButton(definition) {
-        if (window.PulsePlusHeaderButtons) {
-            window.PulsePlusHeaderButtons.register(definition);
+        if (window.TrickPlusHeaderButtons) {
+            window.TrickPlusHeaderButtons.register(definition);
             return;
         }
 
-        window.addEventListener('PulsePlusHeaderButtonsReady', () => {
-            window.PulsePlusHeaderButtons?.register(definition);
+        window.addEventListener('TrickPlusHeaderButtonsReady', () => {
+            window.TrickPlusHeaderButtons?.register(definition);
         }, { once: true });
     }
 
@@ -183,7 +188,7 @@
         if (!TABS[tab]) return;
 
         activeTab = tab;
-        localStorage.setItem('PULSE_FIXES_CHAT_TAB', tab);
+        localStorage.setItem(CHAT_TAB_STORAGE_KEY, tab);
 
         // Оба фрейма всегда на странице — переключение через прозрачность (кроссфейд)
         for (const key of Object.keys(iframes)) {
@@ -210,13 +215,13 @@
             div.classList.add('pulseFixesChatOpened')
         }
         opened = !opened;
-        localStorage.setItem('PULSE_FIXES_CHAT_OPENED', opened ? '1' : '0')
+        localStorage.setItem(CHAT_OPENED_STORAGE_KEY, opened ? '1' : '0')
     }
 
     function toggleLeftSide(val = false) {
         div.classList.toggle('leftSide', val);
         leftSide = val
-        localStorage.setItem('PULSE_FIXES_CHAT_LEFTSIDE', val ? '1' : '0')
+        localStorage.setItem(CHAT_LEFT_SIDE_STORAGE_KEY, val ? '1' : '0')
     }
 
     addChatBtn();

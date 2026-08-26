@@ -1,4 +1,5 @@
-import { MESSAGE_TYPES, STORAGE_KEYS, URLS } from './shared-constants.js';
+import { MESSAGE_TYPES, SETTING_KEYS, URLS, WEB_STORAGE_KEYS } from './shared-constants.js';
+import { migrateWebStorage } from './legacy-storage.js';
 import { getExtensionSettings } from './shared-settings.js';
 
 function appendStyles(styles, settings) {
@@ -54,12 +55,12 @@ function setPageSettings(settings) {
 }
 
 function syncPageLocalStorageSettings(settings) {
-    if (settings[STORAGE_KEYS.TRICK_DEBUG_LOGGING]) {
-        localStorage.setItem('TRICK_DEBUG_LOGGING', '1');
+    if (settings[SETTING_KEYS.TRICK_DEBUG_LOGGING]) {
+        localStorage.setItem(WEB_STORAGE_KEYS.DEBUG_ENABLED, '1');
         return;
     }
 
-    localStorage.removeItem('TRICK_DEBUG_LOGGING');
+    localStorage.removeItem(WEB_STORAGE_KEYS.DEBUG_ENABLED);
 }
 
 function sendRequest(payload) {
@@ -163,12 +164,20 @@ function registerWindowNotificationBridge() {
 }
 
 export async function bootstrapContent() {
+    // Первым делом и без await: переименование ключей должно случиться до первого обращения
+    // к ним со страницы и не зависеть от того, переживёт ли fetch обновление расширения.
+    migrateWebStorage();
+
     const modulesJsonUrl = chrome.runtime.getURL('modules.json');
     const response = await fetch(modulesJsonUrl);
     const { scripts = [], styles = [] } = await response.json();
+
+    // Консолидация настроек в один ключ обязана произойти ДО проверки enableFeatures:
+    // иначе у существующих пользователей первый запуск прочитает пустой ключ, увидит
+    // дефолтный false и выключит расширение, так и не выполнив миграцию.
     const settings = await getExtensionSettings();
 
-    if (!settings[STORAGE_KEYS.ENABLE_FEATURES]) {
+    if (!settings[SETTING_KEYS.ENABLE_FEATURES]) {
         return;
     }
 

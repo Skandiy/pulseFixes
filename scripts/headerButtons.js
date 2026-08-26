@@ -1,14 +1,14 @@
 (function () {
-    const REGISTRY_KEY = '__PULSE_PLUS_HEADER_BUTTONS__';
+    const REGISTRY_KEY = '__TRICK_PLUS_HEADER_BUTTONS__';
     const BUTTON_ATTR = 'data-pulse-plus-header-button';
-    const PATCHED_ATTR = '__pulsePlusHeaderButtonsPatched';
+    const PATCHED_ATTR = '__trickPlusHeaderButtonsPatched';
     const HEADER_SELECTOR = 'header';
     const HEADER_SEGMENT_SELECTOR = '.v-toolbar__content > div > div > div:last-of-type';
     const ROW_SELECTOR = '.row';
 
     if (window[REGISTRY_KEY]) {
-        window.PulsePlusHeaderButtons = window[REGISTRY_KEY];
-        window.dispatchEvent(new CustomEvent('PulsePlusHeaderButtonsReady'));
+        window.TrickPlusHeaderButtons = window[REGISTRY_KEY];
+        window.dispatchEvent(new CustomEvent('TrickPlusHeaderButtonsReady'));
         return;
     }
 
@@ -296,7 +296,7 @@
     };
 
     window[REGISTRY_KEY] = api;
-    window.PulsePlusHeaderButtons = api;
+    window.TrickPlusHeaderButtons = api;
 
-    window.dispatchEvent(new CustomEvent('PulsePlusHeaderButtonsReady'));
+    window.dispatchEvent(new CustomEvent('TrickPlusHeaderButtonsReady'));
 })();

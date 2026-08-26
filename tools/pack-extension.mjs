@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * Сборка дистрибутива Pulse Plus для установки «как распакованное расширение».
+ * Сборка дистрибутива Trick Plus для установки «как распакованное расширение».
  *
  * Собирает Vue-модуль event-planning, копирует только те файлы, которые нужны
  * Chrome в рантайме, и кладёт результат в dist/:
- *   dist/pulse-plus-<version>/      — готовая папка для «Загрузить распакованное»
- *   dist/pulse-plus-<version>.zip   — тот же набор одним файлом, для отправки
+ *   dist/trick-plus-<version>/      — готовая папка для «Загрузить распакованное»
+ *   dist/trick-plus-<version>.zip   — тот же набор одним файлом, для отправки
  *
  * Запуск:
  *   node tools/pack-extension.mjs [--skip-build] [--no-zip] [--out <dir>]
@@ -76,12 +76,12 @@ if (fs.existsSync(pkgPath)) {
     }
 }
 
-const packageName = `pulse-plus-${version}`;
+const packageName = `trick-plus-${version}`;
 const outRoot = path.resolve(ROOT, flags.outDir);
 const stageDir = path.join(outRoot, packageName);
 const zipPath = path.join(outRoot, `${packageName}.zip`);
 
-log(`\nPulse Plus ${version} -> ${path.relative(ROOT, outRoot) || '.'}\n`);
+log(`\nTrick Plus ${version} -> ${path.relative(ROOT, outRoot) || '.'}\n`);
 
 // ------------------------------------------------------------------ 2. сборка
 
@@ -187,7 +187,7 @@ for (const file of files) {
 }
 
 const instructions = [
-    `Pulse Plus ${version} — установка в Chrome`,
+    `Trick Plus ${version} — установка в Chrome`,
     '',
     '1. Распакуйте архив в постоянную папку (не во временную и не в «Загрузки»):',
     '   Chrome читает файлы из этой папки при каждом запуске, удалите её —',
@@ -196,7 +196,7 @@ const instructions = [
     '3. Включите «Режим разработчика» — переключатель в правом верхнем углу.',
     '4. Нажмите «Загрузить распакованное расширение» и выберите папку,',
     `   в которой лежит manifest.json (папка ${packageName}).`,
-    '5. Значок Pulse Plus появится на панели расширений — в нём настройки.',
+    '5. Значок Trick Plus появится на панели расширений — в нём настройки.',
     '',
     'Обновление: распакуйте новую версию поверх старой папки и нажмите',
     'кнопку обновления на карточке расширения в chrome://extensions.',

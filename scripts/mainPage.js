@@ -6,8 +6,8 @@
         WINDOW_EXECUTE_PAGE_REQUEST_RESULT: 'WINDOW_EXECUTE_PAGE_REQUEST_RESULT',
     };
 
-    const ROUTE_EVENT = 'PulsePlusMainPageRouteChange';
-    const HISTORY_PATCH_FLAG = '__pulsePlusMainPageHistoryPatched';
+    const ROUTE_EVENT = 'TrickPlusMainPageRouteChange';
+    const HISTORY_PATCH_FLAG = '__trickPlusMainPageHistoryPatched';
 
     const SETTING_PLAN_OVERRIDE_KEY = 'workloadPlanOverride';
 
@@ -62,8 +62,8 @@
 
     // Кэш между перезагрузками: храним не готовое число, а исходные данные (расписание месяца
     // и карточку сотрудника), чтобы отметку можно было посчитать на текущий момент.
-    const PLAN_CACHE_STORAGE_KEY = 'PulsePlus_WorkloadPlan';
-    const PLAN_CACHE_VERSION = 1;
+    const PLAN_CACHE_STORAGE_KEY = 'trickPlus.workloadPlan.cache';
+    const PLAN_CACHE_VERSION = 2;
     const PLAN_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
     const scheduleCache = new Map();
@@ -343,18 +343,30 @@
     }
 
     /**
+     * Интервал времени суток в минуты от полуночи: "08:00-16:30" (график работы) или
+     * "12:00 — 16:00" (период отсутствия — там длинное тире и пробелы).
+     */
+    function parseTimeRange(value) {
+        const match = String(value ?? '').match(/(\d{1,2}):(\d{2})\s*[-\u2013\u2014]\s*(\d{1,2}):(\d{2})/);
+
+        if (!match) {
+            return null;
+        }
+
+        const start = toDayMinutes(Number(match[1]), Number(match[2]));
+        const end = toDayMinutes(Number(match[3]), Number(match[4]));
+
+        return start !== null && end !== null && end > start ? { start, end } : null;
+    }
+
+    /**
      * График работы сотрудника: "08:00-16:30" (времяработы) или "08001630" (режимработы).
      */
     function parseWorkDay(workTime, workMode) {
-        const timeMatch = String(workTime ?? '').match(/^\s*(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})\s*$/);
+        const workTimeRange = parseTimeRange(workTime);
 
-        if (timeMatch) {
-            const start = toDayMinutes(Number(timeMatch[1]), Number(timeMatch[2]));
-            const end = toDayMinutes(Number(timeMatch[3]), Number(timeMatch[4]));
-
-            if (start !== null && end !== null && end > start) {
-                return { start, end };
-            }
+        if (workTimeRange) {
+            return workTimeRange;
         }
 
         const modeMatch = String(workMode ?? '').match(/^\s*(\d{2})(\d{2})(\d{2})(\d{2})\s*$/);
@@ -432,12 +444,25 @@
 
             const key = toDayKey(date);
 
+            const hasAbsence = Boolean(Number(rawDay?.['отсутствие']));
+            // "весьдень" = 0 — отсутствие только на часть дня, сам интервал лежит в
+            // "периодотсутствия". Поля нет (старый ответ) — считаем отсутствие полным.
+            const allDay = rawDay?.['весьдень'];
+            const isPartialAbsence = hasAbsence
+                && allDay !== undefined
+                && allDay !== null
+                && Number(allDay) === 0;
+
             daysByKey.set(key, {
                 key,
                 isDayOff: Number(rawDay?.['типотсутствия']) === DAY_OFF_TYPE,
                 // Выходной внутри периода отпуска приходит с типом отсутствия вместо типа
                 // выходного дня, но из плана он исключается уже по этому флагу.
-                isAbsence: Boolean(Number(rawDay?.['отсутствие'])),
+                isFullAbsence: hasAbsence && !isPartialAbsence,
+                // Норму дня отсутствие на часть дня не уменьшает, поэтому день остаётся
+                // в плане целиком: интервал нужен только чтобы разложить норму по
+                // оставшемуся рабочему времени. Интервал не разобрался — день считаем обычным.
+                absence: isPartialAbsence ? parseTimeRange(rawDay?.['периодотсутствия']) : null,
             });
         }
 
@@ -557,7 +582,7 @@
 
                 if (!workDay) {
                     console.warn(
-                        '[Pulse Plus] Не удалось определить график работы сотрудника,'
+                        '[Trick Plus] Не удалось определить график работы сотрудника,'
                         + ' отметка будет учитывать только прошедшие дни'
                     );
                 }
@@ -586,73 +611,199 @@
     }
 
     /**
+     * Отрезки смены, на которых копится потенциал: график минус интервал отсутствия.
+     * Отсутствие на часть дня норму не уменьшает — те же часы просто набираются за
+     * оставшееся время, то есть быстрее: при смене 08:00-16:30, потенциале 6ч и
+     * отсутствии 12:00—16:30 очередные 30 минут плана набегают за 20 минут вместо 42,5.
+     */
+    function buildWorkSegments(workDay, absence) {
+        const wholeShift = [{ start: workDay.start, end: workDay.end }];
+
+        if (!absence) {
+            return wholeShift;
+        }
+
+        const from = Math.max(workDay.start, absence.start);
+        const to = Math.min(workDay.end, absence.end);
+
+        // Отсутствие целиком вне смены (например, вечером) на график не влияет
+        if (to <= from) {
+            return wholeShift;
+        }
+
+        const segments = [];
+
+        if (from > workDay.start) {
+            segments.push({ start: workDay.start, end: from });
+        }
+
+        if (to < workDay.end) {
+            segments.push({ start: to, end: workDay.end });
+        }
+
+        return segments;
+    }
+
+    function lastSegmentEnd(segments) {
+        return segments.length ? segments[segments.length - 1].end : null;
+    }
+
+    /**
+     * Рабочее время дня: границы смены, отрезки без отсутствия и их суммарная длина.
+     */
+    function resolveDayPlan(workDay, absence) {
+        if (!workDay) {
+            return null;
+        }
+
+        const segments = buildWorkSegments(workDay, absence);
+
+        return {
+            start: workDay.start,
+            end: workDay.end,
+            segments,
+            workMinutes: segments.reduce((sum, segment) => sum + (segment.end - segment.start), 0),
+            absence,
+        };
+    }
+
+    /**
+     * Рабочие минуты, прошедшие к моменту nowMinutes: время отсутствия в них не входит.
+     */
+    function elapsedWorkMinutes(segments, nowMinutes) {
+        let elapsed = 0;
+
+        for (const segment of segments) {
+            if (nowMinutes <= segment.start) {
+                break;
+            }
+
+            elapsed += Math.min(segment.end, nowMinutes) - segment.start;
+        }
+
+        return elapsed;
+    }
+
+    /**
+     * Обратное преобразование: время суток, когда будет отработано workMinutes рабочих минут.
+     */
+    function workMinutesToTimeOfDay(segments, workMinutes) {
+        let left = workMinutes;
+
+        for (const segment of segments) {
+            const span = segment.end - segment.start;
+
+            if (left <= span) {
+                return segment.start + left;
+            }
+
+            left -= span;
+        }
+
+        return lastSegmentEnd(segments);
+    }
+
+    /**
      * Часы потенциала, накопленные к текущему моменту рабочего дня, округлённые вниз
      * до 30 минут плана. Итог всегда кратен получасу: 0, 30мин, 1ч, 1ч30мин...
      */
-    function computeTodayHours(workDay, dailyPotential, now) {
-        if (!workDay || !dailyPotential) {
+    function computeTodayHours(dayPlan, dailyPotential, now) {
+        if (!dayPlan || !dailyPotential) {
             return 0;
         }
 
-        const span = workDay.end - workDay.start;
-        const elapsed = Math.min(span, Math.max(0, toMinutesOfDay(now) - workDay.start));
+        const nowMinutes = toMinutesOfDay(now);
 
-        if (elapsed >= span) {
+        if (nowMinutes >= dayPlan.end) {
             return dailyPotential;
         }
 
-        const accrued = dailyPotential * (elapsed / span);
+        // Смена целиком закрыта отсутствием: копить не на чем, норма доберётся в конце дня
+        if (dayPlan.workMinutes <= 0) {
+            return 0;
+        }
+
+        const elapsed = elapsedWorkMinutes(dayPlan.segments, nowMinutes);
+
+        // Рабочее время кончилось раньше смены — отсутствие стоит в конце дня
+        if (elapsed >= dayPlan.workMinutes) {
+            return dailyPotential;
+        }
+
+        const accrued = dailyPotential * (elapsed / dayPlan.workMinutes);
 
         return Math.floor(accrued / PLAN_STEP_HOURS + FLOAT_EPSILON) * PLAN_STEP_HOURS;
     }
 
     /**
      * Время суток (в минутах), когда значение отметки изменится в следующий раз:
-     * момент набора очередных 30 минут плана, а если их до конца смены уже не набрать —
-     * сам конец смены, где добирается остаток потенциала. null — до конца дня изменений нет.
+     * момент набора очередных 30 минут плана, а если их до конца рабочего времени уже
+     * не набрать — сам его конец, где добирается остаток потенциала. Во время отсутствия
+     * отметка стоит, поэтому шаг попадает уже за его границу.
+     * null — до конца дня изменений нет.
      */
-    function findNextPlanChange(workDay, dailyPotential, now) {
-        if (!workDay || !dailyPotential) {
+    function findNextPlanChange(dayPlan, dailyPotential, now) {
+        if (!dayPlan || !dailyPotential) {
             return null;
         }
 
         const nowMinutes = toMinutesOfDay(now);
 
-        if (nowMinutes < workDay.start) {
-            return workDay.start;
+        if (nowMinutes < dayPlan.start) {
+            return dayPlan.start;
         }
 
-        if (nowMinutes >= workDay.end) {
+        const workEnd = lastSegmentEnd(dayPlan.segments) ?? dayPlan.end;
+
+        if (nowMinutes >= workEnd) {
             return null;
         }
 
-        const span = workDay.end - workDay.start;
-        const accrued = dailyPotential * ((nowMinutes - workDay.start) / span);
+        if (dayPlan.workMinutes <= 0) {
+            return dayPlan.end;
+        }
+
+        const elapsed = elapsedWorkMinutes(dayPlan.segments, nowMinutes);
+        const accrued = dailyPotential * (elapsed / dayPlan.workMinutes);
         const nextStepHours = (Math.floor(accrued / PLAN_STEP_HOURS + FLOAT_EPSILON) + 1) * PLAN_STEP_HOURS;
 
         if (nextStepHours >= dailyPotential) {
-            return workDay.end;
+            return workEnd;
         }
 
-        return workDay.start + (nextStepHours / dailyPotential) * span;
+        return workMinutesToTimeOfDay(
+            dayPlan.segments,
+            (nextStepHours / dailyPotential) * dayPlan.workMinutes
+        );
+    }
+
+    /**
+     * Рабочее время на сегодня. null — копить нечего: выходной, отсутствие на весь день,
+     * сегодняшнего дня нет в загруженном месяце или график сотрудника неизвестен.
+     */
+    function resolveTodayPlan(days, employeePlan, now) {
+        const today = days.find((day) => day.key === toDayKey(now));
+
+        if (!today || today.isDayOff || today.isFullAbsence) {
+            return null;
+        }
+
+        return resolveDayPlan(employeePlan.workDay, today.absence);
     }
 
     /**
      * Часы, которые должны быть отмечены к текущему моменту: потенциал за каждый
      * прошедший рабочий день без отпуска плюс накопленная часть текущего дня.
+     * День с отсутствием на часть дня остаётся в плане с полной нормой.
      */
-    function computeExpectedHours(days, employeePlan, now) {
+    function computeExpectedHours(days, employeePlan, todayPlan, now) {
         const todayKey = toDayKey(now);
         const elapsedPlanDays = days
-            .filter((day) => !day.isDayOff && !day.isAbsence && day.key < todayKey)
+            .filter((day) => !day.isDayOff && !day.isFullAbsence && day.key < todayKey)
             .length;
 
-        const today = days.find((day) => day.key === todayKey);
-        const todayHours = today && !today.isDayOff && !today.isAbsence
-            ? computeTodayHours(employeePlan.workDay, employeePlan.dailyPotential, now)
-            : 0;
-
-        return employeePlan.dailyPotential * elapsedPlanDays + todayHours;
+        return employeePlan.dailyPotential * elapsedPlanDays
+            + computeTodayHours(todayPlan, employeePlan.dailyPotential, now);
     }
 
     function resolveState(expectedHours, factHours) {
@@ -783,18 +934,41 @@
         applyState(widget.progressbar, resolveState(expectedHours, factHours));
     }
 
+    function formatTimeOfDay(minutes) {
+        return `${pad2(Math.floor(minutes / 60))}:${pad2(Math.round(minutes % 60))}`;
+    }
+
+    /**
+     * Пояснение к отметке. Отсутствие на часть дня подписываем: норма та же, но набирается
+     * быстрее, и без подписи ускорившаяся отметка выглядит как ошибка.
+     */
+    function buildPlanNote(employeePlan, todayPlan) {
+        const note = `потенциал ${formatHours(employeePlan.dailyPotential)}/день`;
+
+        if (!todayPlan?.absence) {
+            return note;
+        }
+
+        const { start, end } = todayPlan.absence;
+
+        return `${note}, сегодня отсутствие ${formatTimeOfDay(start)}—${formatTimeOfDay(end)}`;
+    }
+
     /**
      * Считает и рисует отметку по данным сотрудника — одинаково и для кэша, и для свежего ответа.
      */
     function applyEmployeePlan(widget, days, employeePlan, planHours, factHours) {
-        setPlanTickPlan(employeePlan);
+        const now = new Date();
+        const todayPlan = resolveTodayPlan(days, employeePlan, now);
+
+        setPlanTickPlan(employeePlan, todayPlan);
 
         applyWorkloadPlan(
             widget,
-            computeExpectedHours(days, employeePlan, new Date()),
+            computeExpectedHours(days, employeePlan, todayPlan, now),
             planHours,
             factHours,
-            `потенциал ${formatHours(employeePlan.dailyPotential)}/день`
+            buildPlanNote(employeePlan, todayPlan)
         );
     }
 
@@ -802,6 +976,7 @@
     let planOverrideHours = null;
     let planTickTimer = null;
     let planTickPlan = null;
+    let planTickPlanKey = null;
 
     async function refreshWorkloadMarker() {
         if (!isMainPageRoute()) {
@@ -832,7 +1007,7 @@
         const employeeId = readEmployeeIdFromLink(link);
 
         if (!employeeId) {
-            console.warn('[Pulse Plus] В ссылке трудозатрат нет исполнителя, отметку плана построить нельзя');
+            console.warn('[Trick Plus] В ссылке трудозатрат нет исполнителя, отметку плана построить нельзя');
             return;
         }
 
@@ -863,7 +1038,7 @@
                 loadEmployeePlan(employeeId, month.year, month.month),
             ]);
         } catch (error) {
-            console.warn('[Pulse Plus] Не удалось получить данные для отметки плана трудозатрат:', error);
+            console.warn('[Trick Plus] Не удалось получить данные для отметки плана трудозатрат:', error);
             return;
         }
 
@@ -871,7 +1046,7 @@
         writePlanCache(cacheKey, days, employeePlan);
 
         if (employeePlan.dailyPotential === null) {
-            console.warn('[Pulse Plus] У сотрудника не заполнен потенциал, отметка плана не построена');
+            console.warn('[Trick Plus] У сотрудника не заполнен потенциал, отметка плана не построена');
             return;
         }
 
@@ -929,7 +1104,7 @@
 
         const now = new Date();
         const nextChange = planTickPlan
-            ? findNextPlanChange(planTickPlan.workDay, planTickPlan.dailyPotential, now)
+            ? findNextPlanChange(planTickPlan.dayPlan, planTickPlan.dailyPotential, now)
             : null;
         const delay = nextChange === null
             ? PLAN_IDLE_INTERVAL_MS
@@ -946,22 +1121,29 @@
         }, delay);
     }
 
+    function planTickKey(dailyPotential, dayPlan) {
+        const segments = dayPlan
+            ? dayPlan.segments.map((segment) => `${segment.start}-${segment.end}`).join(',')
+            : '';
+
+        return `${dailyPotential ?? ''}|${dayPlan ? dayPlan.end : ''}|${segments}`;
+    }
+
     /**
      * Потенциал и график приходят уже после первого тика, поэтому при их появлении
-     * (или изменении) расписание тиков пересобираем.
+     * расписание тиков пересобираем. Так же — когда меняется рабочее время сегодняшнего
+     * дня: отметили отсутствие, и шаги плана поехали на другие моменты.
      */
-    function setPlanTickPlan(employeePlan) {
-        const workDay = employeePlan?.workDay || null;
+    function setPlanTickPlan(employeePlan, todayPlan) {
         const dailyPotential = employeePlan?.dailyPotential ?? null;
-        const isSame = (planTickPlan?.dailyPotential ?? null) === dailyPotential
-            && (planTickPlan?.workDay?.start ?? null) === (workDay ? workDay.start : null)
-            && (planTickPlan?.workDay?.end ?? null) === (workDay ? workDay.end : null);
+        const key = planTickKey(dailyPotential, todayPlan);
 
-        if (isSame) {
+        if (planTickPlanKey === key) {
             return;
         }
 
-        planTickPlan = { dailyPotential, workDay };
+        planTickPlanKey = key;
+        planTickPlan = { dailyPotential, dayPlan: todayPlan };
         scheduleNextPlanTick();
     }
 
@@ -995,7 +1177,7 @@
 
         if (planOverrideHours !== null) {
             console.info(
-                `[Pulse Plus] Отметка плана задана вручную: ${formatHours(planOverrideHours)}.`
+                `[Trick Plus] Отметка плана задана вручную: ${formatHours(planOverrideHours)}.`
                 + ' Сбросить можно в настройках расширения (Диагностика).'
             );
         }
@@ -1023,7 +1205,7 @@
                 initWorkloadPlanMarker(settings);
             })
             .catch((error) => {
-                console.warn('[Pulse Plus] Настройки главной страницы не загружены:', error);
+                console.warn('[Trick Plus] Настройки главной страницы не загружены:', error);
             });
     }
 

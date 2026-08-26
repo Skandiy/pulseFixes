@@ -1,5 +1,6 @@
 (() => {
-    const DASHBOARD_SET_PROPERTY_PATCHED = '__pulsePlusDashboardSetPropertyPatched';
+    const THEME_STORAGE_KEY = 'trickPlus.theme';
+    const DASHBOARD_SET_PROPERTY_PATCHED = '__trickPlusDashboardSetPropertyPatched';
 
     function isSettingEnabled(settings, key) {
         return settings?.[key] !== false;
@@ -40,13 +41,13 @@
 
     function _ () {
         function registerHeaderButton(definition) {
-            if (window.PulsePlusHeaderButtons) {
-                window.PulsePlusHeaderButtons.register(definition);
+            if (window.TrickPlusHeaderButtons) {
+                window.TrickPlusHeaderButtons.register(definition);
                 return;
             }
 
-            window.addEventListener('PulsePlusHeaderButtonsReady', () => {
-                window.PulsePlusHeaderButtons?.register(definition);
+            window.addEventListener('TrickPlusHeaderButtonsReady', () => {
+                window.TrickPlusHeaderButtons?.register(definition);
             }, { once: true });
         }
 
@@ -65,10 +66,10 @@
         function themeChange() {
             if (theme === 'light') {
                 theme = 'dark';
-                localStorage.setItem('PulsePlus_Theme', theme);
+                localStorage.setItem(THEME_STORAGE_KEY, theme);
             } else {
                 theme = 'light';
-                localStorage.setItem('PulsePlus_Theme', theme);
+                localStorage.setItem(THEME_STORAGE_KEY, theme);
             }
             themeSet()
         }
@@ -81,7 +82,7 @@
             }
         }
 
-        let theme = localStorage.getItem('PulsePlus_Theme');
+        let theme = localStorage.getItem(THEME_STORAGE_KEY);
 
         if (!theme) {
             theme = 'light'

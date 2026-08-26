@@ -400,7 +400,7 @@
                 if (pluginCandidatesByFullApplicationName.length === 1) {
                     [matchedPluginIde] = pluginCandidatesByFullApplicationName;
                 } else if (pluginCandidatesByFullApplicationName.length > 1) {
-                    console.warn('[Pulse Plus] Неоднозначное сопоставление IDE и plugin API по fullApplicationName:', {
+                    console.warn('[Trick Plus] Неоднозначное сопоставление IDE и plugin API по fullApplicationName:', {
                         runningIde,
                         pluginCandidatesByFullApplicationName,
                     });
@@ -613,7 +613,7 @@
             const parsedAbout = parsedBody ?? parsedServer;
 
             if (!parsedAbout) {
-                console.log('[Pulse Plus] IDE app API ответил без подходящего Server header:', {
+                console.log('[Trick Plus] IDE app API ответил без подходящего Server header:', {
                     port,
                     status: response.status,
                     server: response.headers?.server ?? null,
@@ -685,7 +685,7 @@
                 cachedIdePorts
             );
 
-            console.log('[Pulse Plus] Проверяем IDE plugin server ports:', portsToCheck);
+            console.log('[Trick Plus] Проверяем IDE plugin server ports:', portsToCheck);
 
             const discoveryResults = await Promise.all(
                 portsToCheck.map(async (port) => {
@@ -720,7 +720,7 @@
             if (discoveredServers.length === 0) {
                 preferredIdePort = null;
                 cachedIdePorts = [];
-                console.warn('[Pulse Plus] IDE plugin server не найден в диапазоне портов:', `${IDE_PLUGIN_PORT_START}-${IDE_PLUGIN_PORT_END}`);
+                console.warn('[Trick Plus] IDE plugin server не найден в диапазоне портов:', `${IDE_PLUGIN_PORT_START}-${IDE_PLUGIN_PORT_END}`);
                 return null;
             }
 
@@ -729,7 +729,7 @@
             }
 
             const preferredServer = getPreferredIdeServer(discoveredServers);
-            console.log('[Pulse Plus] Найдены IDE plugin server ports:', cachedIdePorts);
+            console.log('[Trick Plus] Найдены IDE plugin server ports:', cachedIdePorts);
 
             return {
                 servers: discoveredServers,
@@ -757,7 +757,7 @@
                 cachedRunningIdePorts
             );
 
-            console.log('[Pulse Plus] Проверяем IDE app ports:', portsToCheck);
+            console.log('[Trick Plus] Проверяем IDE app ports:', portsToCheck);
 
             const discoveryResults = await Promise.all(
                 portsToCheck.map(async (port) => {
@@ -792,7 +792,7 @@
             if (discoveredServers.length === 0) {
                 preferredRunningIdePort = null;
                 cachedRunningIdePorts = [];
-                console.warn('[Pulse Plus] IDE app API не найден в диапазоне портов:', `${IDE_APP_PORT_START}-${IDE_APP_PORT_END}`);
+                console.warn('[Trick Plus] IDE app API не найден в диапазоне портов:', `${IDE_APP_PORT_START}-${IDE_APP_PORT_END}`);
                 return null;
             }
 
@@ -800,8 +800,8 @@
                 preferredRunningIdePort = cachedRunningIdePorts[0];
             }
 
-            console.log('[Pulse Plus] Найдены IDE app ports:', cachedRunningIdePorts);
-            console.log('[Pulse Plus] Найдены IDE app:', discoveredServers);
+            console.log('[Trick Plus] Найдены IDE app ports:', cachedRunningIdePorts);
+            console.log('[Trick Plus] Найдены IDE app:', discoveredServers);
 
             return {
                 servers: discoveredServers,
@@ -1047,7 +1047,7 @@
     }
 
     async function sendOpenProjectRequest(port, payload, allowRediscovery) {
-        console.log('[Pulse Plus] Отправляем команду в IDE API port:', port);
+        console.log('[Trick Plus] Отправляем команду в IDE API port:', port);
 
         const result = await postIdeCommand(port, payload);
         if (result) {
@@ -1064,7 +1064,7 @@
             throw new Error('IDE API request failed');
         }
 
-        console.warn('[Pulse Plus] Не удалось отправить команду в IDE API port, перепроверяем discovery:', port);
+        console.warn('[Trick Plus] Не удалось отправить команду в IDE API port, перепроверяем discovery:', port);
         const ideDiscovery = await discoverIdePluginServer();
         const selectedServer = ideDiscovery?.servers?.find((server) => server.port === port);
 
@@ -1079,7 +1079,7 @@
         const relativeProjectPath = getRelativeProjectPath(entry.url);
 
         if (!relativeProjectPath) {
-            console.warn('[Pulse Plus] Не удалось сформировать relativeProjectPath для:', entry.url);
+            console.warn('[Trick Plus] Не удалось сформировать relativeProjectPath для:', entry.url);
             return;
         }
 
@@ -1088,19 +1088,19 @@
             relativeProjectPath,
         };
 
-        console.log('[Pulse Plus] IDE open payload:', payload);
-        console.log('[Pulse Plus] Выбрана IDE:', ide);
+        console.log('[Trick Plus] IDE open payload:', payload);
+        console.log('[Trick Plus] Выбрана IDE:', ide);
 
         if (!ide?.canOpenProject || !ide?.pluginPort) {
-            console.warn('[Pulse Plus] IDE недоступна для открытия проекта:', ide);
+            console.warn('[Trick Plus] IDE недоступна для открытия проекта:', ide);
             return;
         }
 
         try {
             const response = await sendOpenProjectRequest(ide.pluginPort, payload, true);
-            console.log('[Pulse Plus] IDE open response:', response);
+            console.log('[Trick Plus] IDE open response:', response);
         } catch (error) {
-            console.error('[Pulse Plus] Не удалось отправить команду в IDE API:', error);
+            console.error('[Trick Plus] Не удалось отправить команду в IDE API:', error);
         }
     }
 
@@ -1142,7 +1142,7 @@
     }
 
     function showIdeSelectionMenu(button, wrapper, entry) {
-        console.log('[Pulse Plus] Открываем меню выбора IDE для git:', entry.url);
+        console.log('[Trick Plus] Открываем меню выбора IDE для git:', entry.url);
 
         const items = uiState.ides.map((ide) => ({
             label: `${ide.fullApplicationName}`,
@@ -1174,14 +1174,14 @@
             }
         }
 
-        console.log('[Pulse Plus] Открываем меню IDE links');
+        console.log('[Trick Plus] Открываем меню IDE links');
 
         const items = uiState.gitEntries.map((entry) => ({
             label: entry.name,
             onClick: async (event) => {
                 event.preventDefault();
                 event.stopPropagation();
-                console.log('[Pulse Plus] Выбрана IDE ссылка:', entry.url);
+                console.log('[Trick Plus] Выбрана IDE ссылка:', entry.url);
 
                 const activeIdes = uiState.ides.filter((ide) => ide.canOpenProject);
 
@@ -1553,7 +1553,7 @@
 
         const wrapper = createOpenIdeButton(sourceButton);
         sourceButton.insertAdjacentElement('afterend', wrapper);
-        console.log('[Pulse Plus] Кнопка "Открыть в IDE" добавлена');
+        console.log('[Trick Plus] Кнопка "Открыть в IDE" добавлена');
     }
 
     async function fetchProjectIdByTask(taskId, requestToken) {
@@ -1577,7 +1577,7 @@
         const projectId = normalizeRecordId(getFieldValue(taskResult, TASK_PROJECT_FIELD_NAME));
 
         if (!projectId) {
-            console.warn('[Pulse Plus] Не найдено поле "карточка-проект" для задачи:', taskId, taskResult);
+            console.warn('[Trick Plus] Не найдено поле "карточка-проект" для задачи:', taskId, taskResult);
             return null;
         }
 
@@ -1585,7 +1585,7 @@
     }
 
     async function fetchProjectGitEntries(projectId, requestToken) {
-        console.log('[Pulse Plus] projectId:', projectId);
+        console.log('[Trick Plus] projectId:', projectId);
 
         const projectResponse = await executePageRequest({
             tasks: [
@@ -1607,7 +1607,7 @@
         const gitRawValue = getFieldValue(projectResult, PROJECT_GIT_FIELD_NAME);
 
         if (typeof gitRawValue !== 'string' || !gitRawValue.trim()) {
-            console.warn('[Pulse Plus] Поле "git" отсутствует или пустое для проекта:', projectId, projectResult);
+            console.warn('[Trick Plus] Поле "git" отсутствует или пустое для проекта:', projectId, projectResult);
             return [];
         }
 
@@ -1616,16 +1616,16 @@
         try {
             parsedGit = JSON.parse(gitRawValue);
         } catch (error) {
-            console.warn('[Pulse Plus] Не удалось распарсить поле "git" для проекта:', projectId, error);
+            console.warn('[Trick Plus] Не удалось распарсить поле "git" для проекта:', projectId, error);
             return [];
         }
 
         if (!Array.isArray(parsedGit)) {
-            console.warn('[Pulse Plus] Поле "git" не является массивом для проекта:', projectId, parsedGit);
+            console.warn('[Trick Plus] Поле "git" не является массивом для проекта:', projectId, parsedGit);
             return [];
         }
 
-        console.log('[Pulse Plus] project git:', parsedGit);
+        console.log('[Trick Plus] project git:', parsedGit);
         return normalizeGitEntries(parsedGit);
     }
 
@@ -1633,7 +1633,7 @@
         const { mode, taskId } = taskContext;
         let projectId = taskContext.projectId;
 
-        console.log('[Pulse Plus] Обрабатываем задачу:', taskContext);
+        console.log('[Trick Plus] Обрабатываем задачу:', taskContext);
 
         if (mode === 'ropened') {
             projectId = await fetchProjectIdByTask(taskId, requestToken);
@@ -1649,7 +1649,7 @@
         }
 
         const hasGitEntries = gitEntries.length > 0;
-        console.log('[Pulse Plus] Проверка 1/3: есть ли ссылки на git:', hasGitEntries);
+        console.log('[Trick Plus] Проверка 1/3: есть ли ссылки на git:', hasGitEntries);
 
         if (!hasGitEntries) {
             updateDisabledUiState(mode, taskId, DISABLED_REASON_NO_GIT, []);
@@ -1662,7 +1662,7 @@
         }
 
         const isIdeRunning = Boolean(runningIdeDiscovery);
-        console.log('[Pulse Plus] Проверка 2/3: запущена ли сама IDE:', isIdeRunning);
+        console.log('[Trick Plus] Проверка 2/3: запущена ли сама IDE:', isIdeRunning);
 
         const ideDiscovery = await discoverIdePluginServer();
         if (requestToken !== currentRequestToken) {
@@ -1670,7 +1670,7 @@
         }
 
         const isPluginApiRunning = Boolean(ideDiscovery);
-        console.log('[Pulse Plus] Проверка 3/3: запущен ли API плагина:', isPluginApiRunning);
+        console.log('[Trick Plus] Проверка 3/3: запущен ли API плагина:', isPluginApiRunning);
 
         if (!runningIdeDiscovery) {
             updateDisabledUiState(mode, taskId, DISABLED_REASON_IDE_NOT_RUNNING, gitEntries);
@@ -1695,12 +1695,12 @@
         }
 
         if (openableIdes.length === 0) {
-            console.log('[Pulse Plus] Запущенные IDE без доступного plugin API:', ides);
+            console.log('[Trick Plus] Запущенные IDE без доступного plugin API:', ides);
             updateDisabledUiState(mode, taskId, DISABLED_REASON_TRICK_NOT_INSTALLED, gitEntries);
             return;
         }
 
-        console.log('[Pulse Plus] Обнаруженные IDE:', ides);
+        console.log('[Trick Plus] Обнаруженные IDE:', ides);
         updateUiState(mode, taskId, gitEntries, ides);
     }
 
@@ -1725,7 +1725,7 @@
 
         fetchTaskProjectGit(taskContext, requestToken)
             .catch((error) => {
-                console.error('[Pulse Plus] Ошибка при обработке страницы задачи:', error);
+                console.error('[Trick Plus] Ошибка при обработке страницы задачи:', error);
                 if (requestToken === currentRequestToken) {
                     resetUiState();
                 }

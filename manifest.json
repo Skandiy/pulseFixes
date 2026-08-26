@@ -1,13 +1,13 @@
 {
-  "name": "Pulse Plus",
+  "name": "Trick Plus",
   "description": "Дополнительные функции для пульса",
 
-  "version": "4.1.2",
+  "version": "5.0.0",
 
   "manifest_version": 3,
 
   "action": {
-    "default_title": "Pulse Plus",
+    "default_title": "Trick Plus",
     "default_popup": "popup/popup.html",
     "default_icon": {
       "16": "icons/16.png",
@@ -26,6 +26,7 @@
   },
 
   "permissions": [
+    "alarms",
     "notifications",
     "storage",
     "activeTab",
@@ -37,6 +38,7 @@
     "https://pulse.stack-it.ru/*",
     "https://chat.stack-it.ru/*",
     "https://chat.sk-serv.ru/*",
+    "https://calendar.sk-serv.ru/*",
     "http://127.0.0.1/*",
     "http://localhost/*"
   ],

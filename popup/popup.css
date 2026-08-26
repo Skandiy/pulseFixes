@@ -1,290 +1,1441 @@
-body {
-    text-align:center;
-    width:300px;
-    margin: 0;
-    background: #000f24;
-    color: var(--v-base-1-base);
+/* Trick Plus — popup
+   Тёмная палитра, единственный акцент — фирменный градиент из иконки.
+
+   Про line-height: почти у всех текстовых блоков он задан в пикселях, а не множителем.
+   Дробная высота строки давала дробные координаты, и при снятии композитного слоя после
+   перехода браузер округлял их — текст дёргался на пиксель. */
+
+:root {
+    /* Календарь у input[type=time] и список у select рисует сама система —
+       без этого они приезжают белыми посреди тёмного popup. */
+    color-scheme: dark;
+
+    --bg: #0b0f1a;
+    --bg-deep: #070a12;
+
+    --surface: rgb(255 255 255 / 0.035);
+    --surface-hover: rgb(255 255 255 / 0.065);
+    --surface-press: rgb(255 255 255 / 0.095);
+
+    --stroke: rgb(255 255 255 / 0.07);
+    --stroke-strong: rgb(255 255 255 / 0.13);
+
+    --text: #e9edf7;
+    /* Вторичный текст и подписи: оба проходят по контрасту на фоне --bg,
+       прежние #97a0b6 / #626b81 читались с трудом. */
+    --text-dim: #aab3c8;
+    --text-faint: #8b95ab;
+
+    --grad: linear-gradient(135deg, #3b82f7 0%, #b57cff 55%, #ff63a5 100%);
+    --grad-soft: linear-gradient(135deg, rgb(59 130 247 / 0.18) 0%, rgb(181 124 255 / 0.18) 55%, rgb(255 99 165 / 0.18) 100%);
+    --accent: #b57cff;
+    --accent-glow: rgb(140 124 255 / 0.35);
+
+    --warn: #ffc857;
+    --warn-tint: rgb(255 200 87 / 0.12);
+
+    --r-lg: 16px;
+    --r-md: 12px;
+    --r-sm: 9px;
+
+    /* «Выкат» без отскока — для размеров и позиций */
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+    /* Лёгкий перелёт — только для ползунка и нажатий */
+    --ease-spring: cubic-bezier(0.34, 1.4, 0.5, 1);
+
+    --dur-page: 0.42s;
+    --dur-ui: 0.24s;
+
+    --stage-max: 440px;
+
+    /* Поля popup. Сцена отступает на --pad, а блоки вне её — ещё на ширину жёлоба
+       под полосу прокрутки, поэтому шапка, карточки и плашки стоят по одной вертикали. */
+    --pad: 14px;
+    --pad-bottom: 16px;
+    --gutter: 6px;
+    --edge: calc(var(--pad) + var(--gutter));
 }
 
-#container {
-    margin: 10px;
-    position: relative;
-    user-select: none;
-}
-
-.title-block {
-    font-size: 20px;
-    font-weight: bold;
-    text-align: left;
-    color: var(--v-base-1-base);
-    padding-bottom: 5px;
-    margin-top: 10px;
-
-    &:first-child {
-        /*margin-top: 0;*/
-    }
-}
-
-button {
-    width:100%;
-    color: var(--v-base-1-base);
-    background:linear-gradient(#01a9e1, #5bc4bc);
-    border-width:0px;
-    border-radius:20px;
-    padding:5px;
-    font-weight: bold;
-    cursor:pointer;
-}
-
-.settings-router {
-    position: relative;
-    overflow: hidden;
-    min-height: 176px;
-    transition: height 0.34s cubic-bezier(0.22, 1, 0.36, 1);
-    will-change: height;
-}
-
-.settings-page {
-    display: none;
-    width: 100%;
+* {
     box-sizing: border-box;
 }
 
-.settings-page.active {
-    display: flow-root;
+/* Состояния тумблеров проставляются из JS уже после разбора документа.
+   Без этого при открытии popup «включение» проигрывалось заново. */
+body.is-booting .switch__track,
+body.is-booting .switch__track::after,
+body.is-booting .switch__thumb {
+    transition: none;
 }
 
-.settings-page.transition-page {
-    position: absolute;
-    top: 0;
-    right: 0;
-    left: 0;
-    display: flow-root;
-    min-height: 100%;
-    background: var(--v-stack-darken2);
-    opacity: 1;
-    transition: transform 0.36s cubic-bezier(0.22, 1, 0.36, 1);
-    will-change: transform;
-    backface-visibility: hidden;
-    transform: translate3d(0, 0, 0);
+/* Раскрытые блоки восстанавливаются из хранилища уже после разбора документа:
+   без этого popup при каждом открытии заново разворачивал бы настройки синхронизации. */
+body.is-booting .collapse {
+    transition: none;
 }
 
-.settings-page.transition-page.page-incoming {
-    z-index: 2;
+/* Правила раскладки ниже перебивают display:none из UA-стилей, поэтому усиливаем */
+[hidden] {
+    display: none !important;
 }
 
-.settings-page.transition-page.page-outgoing {
-    z-index: 1;
-    pointer-events: none;
-}
-
-.settings-router.is-transitioning {
-    pointer-events: none;
-}
-
-.settings-page.enter-forward {
-    transform: translate3d(100%, 0, 0);
-}
-
-.settings-page.enter-back {
-    transform: translate3d(-100%, 0, 0);
-}
-
-.settings-page.exit-forward {
-    transform: translate3d(-100%, 0, 0);
-}
-
-.settings-page.exit-back {
-    transform: translate3d(100%, 0, 0);
-}
-
-.settings-page-header {
-    display: grid;
-    grid-template-columns: 34px minmax(0, 1fr) 34px;
-    align-items: center;
-    min-height: 36px;
-    margin-bottom: 6px;
-}
-
-.settings-page-title {
+body {
+    width: 340px;
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 400 14px/18px 'Segoe UI Variable Display', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
     overflow: hidden;
-    color: var(--v-base-1-base);
-    font-size: 18px;
-    font-weight: 700;
+}
+
+/* ------------------------------------------------------------------ каркас */
+
+/* Отступы держат видимые блоки — шапка, карточки, заглушка, плашка. Ни у
+   контейнера, ни у обрезающих обёрток (.stage, .page) своих полей нет: их
+   отступ только сдвигал бы границу обрезки внутрь и срезал бы карточкам тени.
+
+   Зазор под собой держит каждый видимый блок; он же оказывается нижним полем
+   popup, если блок последний. Раскладывать отступы на обе стороны нельзя:
+   между блоками стоят свёрнутые сцена и плашка, а через них отступы не
+   схлопываются (overflow и grid создают свой контекст форматирования) —
+   зазор удваивался бы. */
+.app {
+    position: relative;
+    display: flow-root;
+    isolation: isolate;
+    animation: app-in 0.5s var(--ease) both;
+}
+
+/* Въезжаем сверху вниз: сдвиг вниз попал бы в scroll-высоту документа,
+   и Chrome открыл бы окно выше нужного, а затем резко ужал его. */
+@keyframes app-in {
+    from {
+        opacity: 0;
+        transform: translateY(-6px);
+    }
+}
+
+/* Мягкое свечение фирменных цветов за шапкой — глубина без шума */
+.aurora {
+    position: absolute;
+    top: -110px;
+    right: -70px;
+    z-index: -1;
+    width: 260px;
+    height: 220px;
+    border-radius: 50%;
+    background: var(--grad);
+    filter: blur(58px);
+    opacity: 0.22;
+    pointer-events: none;
+    animation: aurora-drift 18s ease-in-out infinite alternate;
+}
+
+@keyframes aurora-drift {
+    to {
+        transform: translate3d(-46px, 18px, 0) scale(1.15);
+        opacity: 0.14;
+    }
+}
+
+/* ------------------------------------------------------------------- шапка */
+
+.brand {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 11px;
+    margin: var(--pad) var(--edge);
+    padding: 2px 0 0;
+}
+
+.brand__mark {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+    cursor: default;
+    transition: transform 0.3s var(--ease-spring), filter var(--dur-ui) var(--ease);
+    filter: drop-shadow(0 4px 14px rgb(120 90 220 / 0.35));
+}
+
+.brand__mark svg {
+    display: block;
+    width: 36px;
+    height: 36px;
+    transition: transform 0.4s var(--ease-spring);
+}
+
+.brand__mark:active {
+    transform: scale(0.9);
+}
+
+/* Подсказка, что до скрытых настроек осталось немного.
+   Масштаб живёт на вложенном svg, иначе он перебивал бы отклик обёртки на нажатие
+   и значок выглядел бы зависшим на полпути к разблокировке. */
+.brand__mark.is-warming {
+    filter: drop-shadow(0 4px 20px rgb(181 124 255 / 0.75));
+}
+
+.brand__mark.is-warming svg {
+    transform: scale(1.07);
+}
+
+.brand__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+
+.brand__name {
+    overflow: hidden;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 20px;
+    letter-spacing: 0.1px;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.back-button {
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    background: transparent;
-    padding: 0;
-    color: var(--v-primary-lighten2);
-    font-size: 30px;
-    font-weight: 400;
-    line-height: 1;
+.brand__version {
+    color: var(--text-faint);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    line-height: 14px;
+    letter-spacing: 0.2px;
 }
 
-.back-button:hover {
-    background: rgb(255 255 255 / 0.08);
-}
+/* ----------------------------------------------------------- переключатель */
 
-.category-list {
-    overflow: hidden;
-}
-
-.category-button {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    min-height: 42px;
-    border-radius: 0;
-    background: transparent;
-    padding: 5px 15px;
-    color: var(--v-base-1-base);
-    font-size: 16px;
-    font-weight: 500;
-    text-align: left;
-}
-
-.category-button:hover {
-    background: rgb(255 255 255 / 0.08);
-}
-
-.category-button:not(:last-child) {
-    border-bottom: 1px solid var(--v-ty-caption-darken1);
-}
-
-.category-chevron {
+.switch {
+    position: relative;
+    display: inline-block;
     flex: none;
-    color: var(--v-primary-lighten2);
-    font-size: 24px;
-    font-weight: 400;
-    line-height: 1;
+    width: 42px;
+    height: 24px;
+    cursor: pointer;
 }
 
-#reloadNotice {
-    height: 0;
+.switch input {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.switch__track {
+    position: absolute;
+    inset: 0;
+    border: 1px solid var(--stroke-strong);
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.06);
+    transition: background var(--dur-ui) var(--ease),
+                border-color var(--dur-ui) var(--ease),
+                box-shadow 0.3s var(--ease);
+    pointer-events: none;
+}
+
+.switch__track::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: 999px;
+    background: var(--grad);
+    opacity: 0;
+    transition: opacity var(--dur-ui) var(--ease);
+}
+
+.switch__thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    z-index: 1;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #cfd6e6;
+    box-shadow: 0 2px 5px rgb(0 0 0 / 0.45);
+    transition: transform 0.42s var(--ease-spring),
+                background var(--dur-ui) var(--ease),
+                width 0.2s var(--ease);
+    pointer-events: none;
+}
+
+.switch input:checked ~ .switch__track {
+    border-color: transparent;
+    box-shadow: 0 3px 14px var(--accent-glow);
+}
+
+.switch input:checked ~ .switch__track::after {
+    opacity: 1;
+}
+
+.switch input:checked ~ .switch__thumb {
+    background: #fff;
+    transform: translateX(18px);
+}
+
+.switch input:focus-visible ~ .switch__track {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* Ползунок слегка растягивается при нажатии — как в системных тумблерах */
+.switch:active .switch__thumb {
+    width: 22px;
+}
+
+.switch input:checked:active ~ .switch__thumb {
+    transform: translateX(14px);
+}
+
+.switch--lg {
+    width: 46px;
+    height: 26px;
+}
+
+.switch--lg .switch__thumb {
+    width: 20px;
+    height: 20px;
+}
+
+.switch--lg:active .switch__thumb {
+    width: 24px;
+}
+
+.switch--lg input:checked ~ .switch__thumb {
+    transform: translateX(20px);
+}
+
+.switch--lg input:checked:active ~ .switch__thumb {
+    transform: translateX(16px);
+}
+
+/* ------------------------------------------------------------------- сцена */
+
+/* Высота сцены по умолчанию — авто, её задаёт активная страница в потоке.
+   Явные пиксели ставятся только на время анимации и снимаются после неё:
+   иначе первый кадр popup рисовался с нулевой высотой, и окно прыгало. */
+/* Сцена только обрезает страницу и ведёт её высоту. Полей у неё нет и она
+   развёрнута во всю ширину popup: граница обрезки проходит дальше карточек,
+   поэтому их тени, свечение тумблеров и выезжающая страница не срезаются. */
+.stage {
+    position: relative;
     overflow: hidden;
-    transition: 0.25s;
+    margin: 0;
+    transition: height var(--dur-page) var(--ease), opacity 0.3s var(--ease);
+}
 
-    background: var(--v-warning-base);
-    border-radius: 8px;
-    display: flex;
+.stage.is-collapsed {
+    opacity: 0;
+}
+
+/* Страница — колонка из неподвижной шапки и прокручиваемого тела. */
+.page {
+    display: none;
     flex-direction: column;
-    gap: 8px;
-    padding: 0 10px;
-    margin-top: 0;
-    color: var(--v-ty-primary-base);
-    font-size: 16px;
-    font-weight: bold;
+    max-height: var(--stage-max);
 }
 
-.showReloadNotice {
-    height: 51px !important;
-    padding: 10px !important;
-    margin-top: 10px !important;
-}
-
-.show {
-    display: block !important;
-
-    & + #settings {
-        padding-bottom: 60px;
-    }
-}
-
-.col {
+/* position: relative — не смещает страницу, но делает её offsetParent для замера */
+.page.is-active {
+    position: relative;
     display: flex;
-    flex-direction: column;
-    gap: 10px;
 }
+
+/* Измеряемая и едущие страницы выходят из потока, чтобы не влиять на высоту сцены */
+.page.is-measuring,
+.page.is-moving {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    display: flex;
+}
+
+/* Прокручивается только тело: шапка с кнопкой «Назад» лежит выше и в прокрутку
+   не попадает, поэтому под неё ничего не уезжает.
+
+   min-height: 0 обязателен — без него flex-элемент не сжимается ниже своего
+   содержимого, и длинная страница вылезала бы за пределы сцены вместо прокрутки. */
+.page-body {
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    /* Место под скролл резервируем с обеих сторон: длинная страница не перекрывает карточку
+       полосой прокрутки, а короткая не съезжает вбок относительно длинной. */
+    scrollbar-gutter: stable both-edges;
+}
+
+.page.is-measuring {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.page.is-moving {
+    transition: transform var(--dur-page) var(--ease), opacity 0.3s var(--ease);
+}
+
+.page.is-leaving {
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+    transition-duration: 0.28s;
+}
+
+.page.is-entering {
+    z-index: 1;
+}
+
+.page.from-forward {
+    opacity: 0;
+    transform: translate3d(34px, 0, 0);
+}
+
+.page.from-back {
+    opacity: 0;
+    transform: translate3d(-34px, 0, 0);
+}
+
+.page.to-forward {
+    opacity: 0;
+    transform: translate3d(-34px, 0, 0);
+}
+
+.page.to-back {
+    opacity: 0;
+    transform: translate3d(34px, 0, 0);
+}
+
+/* Тонкий скролл, когда страница длиннее popup */
+.page-body::-webkit-scrollbar {
+    width: var(--gutter);
+}
+
+.page-body::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.16);
+    background-clip: content-box;
+}
+
+.page-body::-webkit-scrollbar-thumb:hover {
+    background: rgb(255 255 255 / 0.28);
+    background-clip: content-box;
+}
+
+/* Горизонтальные поля внутри сцены держат сами блоки. Вместе с жёлобом под полосу
+   прокрутки это те же --edge от края popup, что и у шапки, а до границы обрезки у
+   карточек остаётся запас на тени. Сверху страница начинается вплотную к сцене:
+   зазор до шапки popup держит она сама. */
+.section-title,
+.card,
+.hint {
+    margin-left: var(--pad);
+    margin-right: var(--pad);
+}
+
+.page-body > :last-child {
+    margin-bottom: var(--pad-bottom);
+}
+
+/* ------------------------------------------------- заголовок подстраницы */
+
+/* Три колонки: кнопка слева, заголовок ровно по центру шапки,
+   правая колонка пустая и уравновешивает левую.
+
+   Шапка лежит вне прокручиваемого тела страницы, поэтому остаётся на месте сама
+   по себе — без закрепления и без подложки: под неё ничего не уезжает.
+   Горизонтальный отступ до текста задан padding'ом, а не margin'ом, как у
+   карточек: жёлоб под полосу прокрутки остался у тела и до шапки не доходит. */
+.page-head {
+    flex: none;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 0 calc(var(--edge) + 2px);
+}
+
+/* Подсвечивается вся кнопка целиком, но сама она неподвижна —
+   у её края ничего не дёргается, уезжает только стрелка внутри. */
+.page-back {
+    grid-column: 1;
+    justify-self: start;
+    display: grid;
+    grid-auto-flow: column;
+    align-items: center;
+    gap: 3px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    padding: 6px 12px 6px 8px;
+    color: var(--text-dim);
+    font: inherit;
+    font-size: 13px;
+    line-height: 18px;
+    cursor: pointer;
+    transition: background var(--dur-ui) var(--ease), color var(--dur-ui) var(--ease);
+}
+
+.page-back:hover {
+    background: var(--surface-hover);
+    color: var(--text);
+}
+
+.page-back:active {
+    background: var(--surface-press);
+}
+
+.page-back:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.page-back__arrow {
+    display: grid;
+    place-items: center;
+    transition: transform 0.32s var(--ease-spring);
+}
+
+.page-back__arrow svg {
+    display: block;
+    width: 16px;
+    height: 16px;
+}
+
+.page-back:hover .page-back__arrow {
+    transform: translateX(-3px);
+}
+
+.page-back:active .page-back__arrow {
+    transform: translateX(-3px) scale(0.88);
+}
+
+.page-head__title {
+    grid-column: 2;
+    overflow: hidden;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 18px;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.section-title {
+    padding: 14px 4px 7px;
+    color: var(--text-dim);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 14px;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+}
+
+.section-title:first-child {
+    padding-top: 2px;
+}
+
+/* ---------------------------------------------------------------- карточки */
+
+.card {
+    position: relative;
+    border: 1px solid var(--stroke);
+    border-radius: var(--r-lg);
+    background: var(--surface);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04);
+}
+
+.card + .card {
+    margin-top: 10px;
+}
+
+/* Плавное появление содержимого при входе на страницу */
+.stagger {
+    opacity: 0;
+    transform: translateY(7px);
+}
+
+.page.is-active .stagger {
+    opacity: 1;
+    transform: none;
+    transition: opacity 0.34s var(--ease) calc(var(--i, 0) * 26ms),
+                transform 0.46s var(--ease) calc(var(--i, 0) * 26ms);
+}
+
+/* --------------------------------------------------------- строки настроек */
 
 .row {
-    display: flex;
-    flex-direction: row;
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    min-height: 42px;
+    padding: 7px 14px;
 }
 
-.list {
-    display: flex;
-    flex-direction: column;
-    background: oklch(from var(--v-primary-base) calc(l - 0.1) c h/0.5);
-    border-radius: 8px;
-
-    & > div {
-        border-bottom: 1px solid var(--v-ty-caption-darken1);
-
-        &:last-child {
-            border-bottom: none;
-        }
-    }
+.row + .row::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 14px;
+    left: 14px;
+    height: 1px;
+    background: var(--stroke);
 }
 
-.block {
-    display: flex;
-    flex-direction: row;
-    padding: 5px 15px;
-
-    a {
-        text-decoration: none;
-        color: #fff;
-    }
+.row__label {
+    color: var(--text);
+    font-size: 13.5px;
+    line-height: 18px;
+    cursor: pointer;
 }
 
-label {
-    font-size: 16px;
-    color: var(--v-base-1-base);
-    display: flex;
-    justify-content: space-between;
+.row--stacked {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+}
+
+/* ------------------------------------------------------------- навигация */
+
+.nav {
+    overflow: hidden;
+    border-radius: var(--r-lg);
+}
+
+.nav-item {
+    position: relative;
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
     width: 100%;
+    border: 0;
+    background: transparent;
+    padding: 11px 13px;
+    color: var(--text);
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 500;
+    line-height: 18px;
+    text-align: left;
+    cursor: pointer;
+    transition: background var(--dur-ui) var(--ease), transform 0.18s var(--ease);
+}
+
+.nav-item + .nav-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 13px;
+    left: 55px;
+    height: 1px;
+    background: var(--stroke);
+}
+
+.nav-item:hover {
+    background: var(--surface-hover);
+}
+
+.nav-item:active {
+    background: var(--surface-press);
+    transform: scale(0.985);
+}
+
+.nav-item__icon {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: var(--r-sm);
+    background: var(--grad-soft);
+    color: #d9c7ff;
+    transition: color var(--dur-ui) var(--ease), transform 0.35s var(--ease-spring);
+}
+
+.nav-item__icon svg {
+    width: 17px;
+    height: 17px;
+}
+
+.nav-item:hover .nav-item__icon {
+    color: #fff;
+    transform: scale(1.08);
+}
+
+.nav-item__chevron {
+    display: grid;
+    place-items: center;
+    color: var(--text-faint);
+    transition: transform 0.32s var(--ease), color var(--dur-ui) var(--ease);
+}
+
+.nav-item__chevron svg {
+    width: 16px;
+    height: 16px;
+}
+
+.nav-item:hover .nav-item__chevron {
+    color: var(--text-dim);
+    transform: translateX(3px);
+}
+
+/* -------------------------------------------------------------- элементы */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    height: 34px;
+    border: 0;
+    border-radius: var(--r-sm);
+    background: var(--grad);
+    padding: 0 14px;
+    color: #fff;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 18px;
+    cursor: pointer;
+    transition: filter var(--dur-ui) var(--ease),
+                transform 0.16s var(--ease),
+                box-shadow var(--dur-ui) var(--ease);
+}
+
+.btn:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 4px 16px var(--accent-glow);
+}
+
+.btn:active {
+    transform: scale(0.975);
+}
+
+/* Заблокированная кнопка не откликается на наведение и нажатие. Прозрачность при этом
+   не снижаем: единственная такая кнопка гасится на время запроса и должна выглядеть
+   работающей, а не выключенной. */
+.btn:disabled {
+    cursor: default;
+    filter: none;
+}
+
+.btn:disabled:active {
+    transform: none;
+}
+
+.btn--ghost {
+    border: 1px solid var(--stroke-strong);
+    background: transparent;
+    color: var(--text-dim);
+}
+
+.btn--ghost:hover {
+    background: var(--surface-hover);
+    color: var(--text);
+    box-shadow: none;
+    filter: none;
+}
+
+.btn--dark {
+    background: rgb(0 0 0 / 0.28);
+    color: #f6e6c4;
+}
+
+.btn--dark:hover {
+    background: rgb(0 0 0 / 0.4);
+    box-shadow: none;
+    filter: none;
+}
+
+/* Три состояния кнопки — «нажми», «идёт запрос», «готово» — лежат друг на друге
+   и меняются кроссфейдом. Размер кнопки не зависит от надписи, поэтому карточка
+   под ней не дёргается, а текст не перепрыгивает на другую ширину. */
+
+.btn--sync {
+    position: relative;
+    overflow: hidden;
+}
+
+.btn__face {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: opacity 0.22s var(--ease), transform 0.36s var(--ease);
+}
+
+/* Ещё не показанные состояния ждут снизу */
+.btn__face--busy,
+.btn__face--done {
+    opacity: 0;
+    transform: translateY(9px);
+}
+
+/* Уходящее состояние поднимается вверх, приходящее встаёт на его место */
+.btn--sync.is-busy .btn__face,
+.btn--sync.is-done .btn__face {
+    opacity: 0;
+    transform: translateY(-9px);
+}
+
+.btn--sync.is-busy .btn__face--busy,
+.btn--sync.is-done .btn__face--done {
+    opacity: 1;
+    transform: none;
+}
+
+.btn--sync.is-busy {
+    box-shadow: 0 4px 18px var(--accent-glow);
+}
+
+/* Блик пробегает по кнопке, пока идёт запрос */
+.btn--sync.is-busy::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(100deg, transparent 32%, rgb(255 255 255 / 0.26) 50%, transparent 68%);
+    animation: sheen 1.3s var(--ease) infinite;
+    pointer-events: none;
+}
+
+@keyframes sheen {
+    from {
+        transform: translateX(-100%);
+    }
+
+    to {
+        transform: translateX(100%);
+    }
+}
+
+.spinner {
+    flex: none;
+    width: 15px;
+    height: 15px;
+    border: 2px solid rgb(255 255 255 / 0.34);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.72s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(1turn);
+    }
+}
+
+.btn--sync.is-done {
+    animation: done-pop 0.46s var(--ease-spring);
+}
+
+@keyframes done-pop {
+    35% {
+        transform: scale(1.035);
+    }
+}
+
+/* Галочка дорисовывается, а не проявляется целиком */
+.tick {
+    flex: none;
+    width: 16px;
+    height: 16px;
+    stroke-dasharray: 21;
+    stroke-dashoffset: 21;
+}
+
+.btn--sync.is-done .tick {
+    animation: tick-draw 0.4s var(--ease) 0.1s forwards;
+}
+
+@keyframes tick-draw {
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+.num {
+    flex: none;
+    width: 74px;
+    border: 1px solid var(--stroke-strong);
+    border-radius: var(--r-sm);
+    background: rgb(0 0 0 / 0.22);
+    padding: 6px 9px;
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    line-height: 18px;
+    text-align: right;
+    transition: border-color var(--dur-ui) var(--ease), box-shadow var(--dur-ui) var(--ease);
+}
+
+.num:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgb(181 124 255 / 0.16);
+    outline: none;
+}
+
+.num::-webkit-inner-spin-button {
+    opacity: 0.35;
+}
+
+/* Ширину задаёт само поле: у времени она зависит от системного формата (12/24 ч) */
+.num--time {
+    width: auto;
     text-align: left;
 }
 
-input[type="number"] {
-    flex: none;
-    width: 70px;
-    padding: 2px 6px;
-    color: var(--v-base-1-base);
-    background: transparent;
-    border: 1px solid var(--v-base-4-base);
-    border-radius: 6px;
-    font-size: 14px;
-    text-align: right;
+.num--time::-webkit-calendar-picker-indicator {
+    opacity: 0.45;
+    cursor: pointer;
+    transition: opacity var(--dur-ui) var(--ease);
 }
 
-#info {
-    display: flex;
-    margin: 10px;
-    justify-content: center;
-    cursor: default;
+.num--time:hover::-webkit-calendar-picker-indicator {
+    opacity: 0.8;
+}
 
-    & > div {
-        display: flex;
-        flex-direction: column;
-        margin-left: 10px;
-        text-align: start;
-        justify-content: center;
+/* ------------------------------------------------------- выпадающий список
 
-        & > p {
-            margin: 0;
-        }
+   Своя разметка вместо <select>: системный список Chrome рисует за пределами
+   страницы, и ни палитра popup, ни скругления на него не действуют. Сам список
+   лежит в верхнем слое — см. .picker-menu ниже. */
+
+.picker {
+    display: grid;
+    grid-auto-flow: column;
+    align-items: center;
+    gap: 5px;
+    max-width: 176px;
+    border: 1px solid var(--stroke-strong);
+    border-radius: var(--r-sm);
+    background: rgb(0 0 0 / 0.22);
+    padding: 6px 8px 6px 11px;
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    line-height: 18px;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color var(--dur-ui) var(--ease),
+                background-color var(--dur-ui) var(--ease),
+                box-shadow var(--dur-ui) var(--ease);
+}
+
+.picker:hover {
+    border-color: rgb(255 255 255 / 0.2);
+    background-color: rgb(0 0 0 / 0.3);
+}
+
+.picker:focus-visible,
+.picker.is-open {
+    border-color: var(--accent);
+    background-color: rgb(0 0 0 / 0.34);
+    box-shadow: 0 0 0 3px rgb(181 124 255 / 0.16);
+    outline: none;
+}
+
+.picker__value {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.picker__arrow {
+    display: grid;
+    place-items: center;
+    color: var(--text-faint);
+    transition: transform 0.3s var(--ease-spring), color var(--dur-ui) var(--ease);
+}
+
+.picker__arrow svg {
+    display: block;
+    width: 13px;
+    height: 13px;
+}
+
+.picker:hover .picker__arrow {
+    color: var(--text-dim);
+}
+
+.picker.is-open .picker__arrow {
+    transform: rotate(180deg);
+    color: var(--accent);
+}
+
+/* Список позиционируется из picker.js, поэтому inset из UA-стилей popover нужно снять.
+   Появление — рост из угла кнопки: сдвига здесь нет намеренно, сторону раскрытия
+   считают уже после showPopover, а @starting-style читается раньше. */
+.picker-menu {
+    position: fixed;
+    inset: auto;
+    overflow-y: auto;
+    margin: 0;
+    border: 1px solid var(--stroke-strong);
+    border-radius: var(--r-md);
+    /* Непрозрачная подложка, без backdrop-filter: размытие в верхнем слое заставляет
+       Chrome вырезать backdrop root, и на программном рендере страница под списком
+       перестаёт отрисовываться целиком. */
+    background: #171f33;
+    padding: 5px;
+    box-shadow: 0 20px 40px rgb(0 0 0 / 0.55),
+                0 3px 10px rgb(0 0 0 / 0.4),
+                inset 0 1px 0 rgb(255 255 255 / 0.05);
+    color: var(--text);
+    opacity: 0;
+    transform: scale(0.94);
+    transform-origin: top right;
+    transition: opacity 0.16s var(--ease),
+                transform 0.26s var(--ease),
+                display 0.26s allow-discrete,
+                overlay 0.26s allow-discrete;
+}
+
+.picker-menu.is-above {
+    transform-origin: bottom right;
+}
+
+.picker-menu:popover-open {
+    opacity: 1;
+    transform: none;
+}
+
+@starting-style {
+    .picker-menu:popover-open {
+        opacity: 0;
+        transform: scale(0.94);
     }
 }
 
-#settings, .settings-page, .advancedSettings {
+.picker-menu::-webkit-scrollbar {
+    width: var(--gutter);
+}
+
+.picker-menu::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.16);
+    background-clip: content-box;
+}
+
+.picker-option {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    border-radius: var(--r-sm);
+    padding: 8px 10px;
+    color: var(--text-dim);
+    font-size: 13px;
+    line-height: 18px;
+    cursor: pointer;
+    transition: background var(--dur-ui) var(--ease), color var(--dur-ui) var(--ease);
+}
+
+.picker-option + .picker-option {
+    margin-top: 2px;
+}
+
+.picker-option:hover,
+.picker-option:focus-visible {
+    background: var(--surface-hover);
+    color: var(--text);
+    outline: none;
+}
+
+.picker-option:focus-visible {
+    box-shadow: inset 0 0 0 1px var(--accent-glow);
+}
+
+.picker-option[aria-selected='true'] {
+    background: var(--grad-soft);
+    color: var(--text);
+    font-weight: 500;
+}
+
+.picker-option__label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Место под галочку держится всегда: иначе выбор пункта сдвигал бы подписи соседей */
+.picker-option__mark {
+    display: grid;
+    place-items: center;
+    width: 14px;
+    height: 14px;
+    color: var(--accent);
+    opacity: 0;
+    transform: scale(0.5);
+    transition: opacity var(--dur-ui) var(--ease), transform 0.32s var(--ease-spring);
+}
+
+.picker-option__mark svg {
+    display: block;
+    width: 14px;
+    height: 14px;
+}
+
+.picker-option[aria-selected='true'] .picker-option__mark {
+    opacity: 1;
+    transform: none;
+}
+
+.hint {
+    padding: 10px 4px 0;
+    color: var(--text-faint);
+    font-size: 11.5px;
+    line-height: 16px;
+}
+
+/* -------------------------------------------------------- блок синхронизации */
+
+/* grid, а не поток: кнопка внутри инлайновая, и в блочном контексте под ней
+   оставалась бы пустая полоса в высоту строчного интерлиньяжа. */
+.sync {
+    display: grid;
+    padding: 12px 14px;
+}
+
+/* Раскрывающийся блок: высоту ведёт grid-template-rows 0fr → 1fr, поэтому её не нужно
+   измерять из JS — содержимое само задаёт, куда ехать. Сцена в покое стоит на auto
+   и растёт вслед за карточкой. */
+.collapse {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows var(--dur-page) var(--ease);
+}
+
+.collapse > * {
+    overflow: hidden;
+    min-height: 0;
+}
+
+.collapse.is-open {
+    grid-template-rows: 1fr;
+}
+
+/* Обёртка внутри .collapse — служебная, она нужна лишь для обрезки. Заголовок
+   раздела в ней отбивается от карточки выше как обычный, а не как первый в блоке. */
+.collapse .section-title:first-child {
+    padding-top: 14px;
+}
+
+.alert {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 8px;
+    margin-top: 10px;
+    border: 1px solid rgb(255 99 132 / 0.32);
+    border-radius: var(--r-md);
+    background: rgb(255 99 132 / 0.1);
+    padding: 9px 11px;
+    opacity: 0;
+    transition: opacity 0.2s var(--ease);
+}
+
+/* both удерживает конечный кадр, пока блок открыт. При закрытии анимация снимается,
+   и плашка гаснет переходом выше — одновременно со схлопыванием высоты. */
+.collapse.is-open .alert {
+    animation: alert-in 0.52s var(--ease) both;
+}
+
+@keyframes alert-in {
+    0% {
+        opacity: 0;
+        transform: translateY(-7px);
+    }
+
+    55% {
+        opacity: 1;
+        transform: translateX(2.5px);
+    }
+
+    72% {
+        transform: translateX(-2px);
+    }
+
+    88% {
+        transform: translateX(1px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.alert__icon {
+    display: grid;
+    place-items: center;
+    height: 16px;
+    color: #ff8fa3;
+}
+
+.alert__icon svg {
+    width: 15px;
+    height: 15px;
+}
+
+.alert__body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.alert__title {
+    color: #ffbcc8;
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 16px;
+}
+
+.alert__detail {
+    color: rgb(255 188 200 / 0.7);
+    font-size: 11.5px;
+    line-height: 15px;
+    /* Ответ сервера может прийти одним длинным словом — рвём его, а не карточку */
+    overflow-wrap: anywhere;
+}
+
+.alert__detail:empty {
     display: none;
 }
 
-#settings.show {
-    display: block !important;
+/* Самой ссылки здесь нет: руками её не набирают — календарь подписывают одной из
+   кнопок, а «Копировать» кладёт адрес .ics в буфер для всего остального. */
+.subscribe {
+    margin-top: 10px;
+    border: 1px solid var(--stroke);
+    border-radius: var(--r-md);
+    background: rgb(255 255 255 / 0.03);
+    padding: 9px 11px 11px;
+    opacity: 0;
+    transform: translateY(-7px);
+    transition: opacity 0.24s var(--ease), transform 0.44s var(--ease);
 }
 
-.list.advancedSettings.show {
-    display: flex !important;
+.collapse.is-open .subscribe {
+    opacity: 1;
+    transform: none;
 }
 
-.title-block.advancedSettings.show {
-    display: block !important;
+/* Две колонки: в 340 px popup четыре кнопки в ряд ужались бы до одних значков. */
+.apps {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 9px;
+}
+
+.btn--app {
+    gap: 7px;
+    height: 32px;
+    padding: 0 9px;
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.btn--app svg {
+    flex: none;
+    width: 14px;
+    height: 14px;
+}
+
+/* Сервис не всегда отдаёт прямую ссылку на .ics — без неё кнопке некуда вести */
+.btn--app:disabled,
+.btn--app[aria-disabled='true'] {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+.subscribe__label {
+    display: block;
+    color: var(--text-faint);
+    font-size: 10.5px;
+    font-weight: 600;
+    line-height: 14px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+/* ------------------------------------------- нижние блоки под сценой
+
+   Место резервируется мгновенно, а въезжает только содержимое. Если анимировать
+   саму высоту, Chrome тянет за ней окно popup, и это читается как «рамки окна
+   разъезжаются», а не как появление элемента. */
+
+.reveal,
+.notice {
+    display: grid;
+    grid-template-rows: 0fr;
+    margin: 0 var(--edge);
+}
+
+.reveal > *,
+.notice > * {
+    overflow: hidden;
+    min-height: 0;
+}
+
+/* Отступы живут на открытом состоянии: свёрнутый блок не занимает ни высоты,
+   ни полей и не оставляет после себя пустую полосу. */
+.reveal.is-open,
+.notice.is-visible {
+    grid-template-rows: 1fr;
+    margin-bottom: var(--pad-bottom);
+}
+
+.offstate__inner,
+.notice__body {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.28s var(--ease), transform 0.44s var(--ease);
+}
+
+.reveal.is-open .offstate__inner,
+.notice.is-visible .notice__body {
+    opacity: 1;
+    transform: none;
+}
+
+/* ------------------------------------------------------ выключенное состояние */
+
+.offstate__inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    border: 1px dashed var(--stroke-strong);
+    border-radius: var(--r-lg);
+    padding: 26px 22px;
+    text-align: center;
+}
+
+.offstate__title {
+    color: var(--text-dim);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 18px;
+}
+
+.offstate__text {
+    color: var(--text-faint);
+    font-size: 11.5px;
+    line-height: 16px;
+}
+
+/* -------------------------------------------------- плашка «нужен перезапуск» */
+
+.notice__body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid rgb(255 200 87 / 0.28);
+    border-radius: var(--r-md);
+    background: var(--warn-tint);
+    padding: 10px 12px;
+}
+
+.notice__text {
+    color: var(--warn);
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 16px;
+}
+
+.notice__body .btn {
+    width: auto;
+    height: 30px;
+    font-size: 12px;
+}
+
+/* Разблокированный скрытый раздел не появляется рывком */
+@keyframes item-reveal {
+    from {
+        opacity: 0;
+        transform: translateY(-9px);
+    }
+}
+
+.is-revealed {
+    animation: item-reveal 0.44s var(--ease) both;
+}
+
+/* ------------------------------------------------------------------- тост */
+
+.toast {
+    /* Позиционируется от .app, а не от вьюпорта: ширина плашки всегда совпадает с карточками. */
+    position: absolute;
+    right: var(--edge);
+    bottom: 10px;
+    left: var(--edge);
+    z-index: 10;
+    border: 1px solid var(--stroke-strong);
+    border-radius: var(--r-md);
+    background: rgb(18 22 34 / 0.94);
+    padding: 9px 12px;
+    box-shadow: 0 10px 30px rgb(0 0 0 / 0.5);
+    color: var(--text);
+    font-size: 12.5px;
+    line-height: 16px;
+    text-align: center;
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+    transition: opacity 0.28s var(--ease), transform 0.36s var(--ease-spring);
+    pointer-events: none;
+    backdrop-filter: blur(10px);
+}
+
+.toast.is-visible {
+    opacity: 1;
+    transform: none;
+}
+
+.toast--error {
+    border-color: rgb(255 99 132 / 0.4);
+    color: #ffbcc8;
+}
+
+/* --------------------------------------------------------------------- a11y */
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+    }
+
+    .stagger,
+    .offstate__inner,
+    .notice__body {
+        opacity: 1;
+        transform: none;
+    }
+
+    /* Спиннер крутится и здесь: замерший индикатор читается как зависший запрос */
+    .spinner {
+        animation-duration: 1s !important;
+        animation-iteration-count: infinite !important;
+    }
 }
