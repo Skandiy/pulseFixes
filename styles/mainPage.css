@@ -1,4 +1,7 @@
-/* Отметка планового объёма трудозатрат на начало текущего дня (виджет "Трудозатраты" на главной) */
+/*
+ * Отметки на шкале виджета "Трудозатраты" на главной: сплошная — сколько часов должно быть
+ * отмечено к текущему моменту, пунктирная — минимальный план на конец месяца.
+ */
 
 .pulse-plus-workload-progress-host {
     position: relative;
@@ -21,9 +24,93 @@
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.65);
 }
 
+/*
+ * Минимальный план на конец месяца — пунктир того же цвета. Штрихи — отдельные элементы
+ * с постоянным разрывом. Их число, длину, разрыв и отступ сверху задаёт scripts/mainPage.js
+ * целым числом физических пикселей, иначе при отрисовке разрывы округлялись бы по-разному.
+ * Значения по умолчанию ниже — только до первого пересчёта.
+ * Ореол только по бокам: обводка со всех сторон, как у сплошной отметки, залила бы разрывы.
+ */
+.pulse-plus-workload-month-marker {
+    position: absolute;
+    top: -5px;
+    bottom: -5px;
+    width: 2px;
+    margin-left: -1px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--pulse-plus-workload-dash-gap, 2px);
+    pointer-events: none;
+    z-index: 2;
+}
+
+.pulse-plus-workload-month-marker__dash {
+    display: block;
+    flex: none;
+    height: var(--pulse-plus-workload-dash, 3px);
+    background-color: var(--v-deep-purple-accent-1-base, #b388ff) !important;
+    box-shadow: -1px 0 0 rgba(255, 255, 255, 0.85), 1px 0 0 rgba(255, 255, 255, 0.85);
+}
+
+.pulse-fixed-dark-theme .pulse-plus-workload-month-marker__dash {
+    box-shadow: -1px 0 0 rgba(0, 0, 0, 0.65), 1px 0 0 rgba(0, 0, 0, 0.65);
+}
+
 /* Цифра плана в строке значений — тем же цветом, что и отметка на шкале */
 .pulse-plus-workload-plan-value {
     color: var(--v-deep-purple-accent-1-base, #b388ff) !important;
+}
+
+/*
+ * Попап-пояснение к цифре плана и отметкам. Наведение scripts/mainPage.js ловит по координатам
+ * курсора, поэтому попап прозрачен для мыши: не перехватывает ни наведение, ни клики.
+ * Оформление повторяет подсказку «Открыть в IDE» (scripts/taskProjectGitWatcher.js): цвета из
+ * переменных темы Pulse, а тёмная тема переопределяет их на body, куда попап и добавляется.
+ */
+.pulse-plus-workload-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 10002;
+    box-sizing: border-box;
+    max-width: 280px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: var(--v-base-1-base, #ffffff);
+    color: var(--v-ty-primary-base, rgba(0, 0, 0, 0.87));
+    box-shadow: color-mix(in srgb, var(--v-ty-primary-base, #000000) 16%, transparent) 0 8px 26px 16px;
+    font-family: Roboto, sans-serif;
+    font-size: 12px;
+    line-height: 1.4;
+    text-align: left;
+    white-space: normal;
+    pointer-events: none !important;
+    user-select: none;
+    opacity: 0;
+    visibility: hidden;
+    /* visibility гаснет после прозрачности, чтобы попап успевал плавно исчезнуть */
+    transition: opacity 100ms ease, visibility 0s linear 100ms;
+}
+
+.pulse-plus-workload-popup--visible {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 100ms ease;
+}
+
+.pulse-plus-workload-popup__title {
+    margin-bottom: 2px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.pulse-plus-workload-popup__accent {
+    font-weight: 500;
+}
+
+.pulse-plus-workload-popup__note {
+    margin-top: 4px;
+    opacity: 0.7;
 }
 
 /*

@@ -12,11 +12,49 @@
     const SETTING_PLAN_OVERRIDE_KEY = 'workloadPlanOverride';
 
     const MARKER_ATTR = 'data-pulse-plus-workload-marker';
+    const MONTH_MARKER_ATTR = 'data-pulse-plus-workload-month-marker';
     const PLAN_VALUE_ATTR = 'data-pulse-plus-workload-plan';
     const STATE_ATTR = 'data-pulse-plus-workload-state';
     const MARKER_CLASS = 'pulse-plus-workload-marker';
+    const MONTH_MARKER_CLASS = 'pulse-plus-workload-month-marker';
+    const MONTH_MARKER_DASH_CLASS = 'pulse-plus-workload-month-marker__dash';
     const PLAN_VALUE_CLASS = 'pulse-plus-workload-plan-value';
     const HOST_CLASS = 'pulse-plus-workload-progress-host';
+    const POPUP_CLASS = 'pulse-plus-workload-popup';
+    const POPUP_VISIBLE_CLASS = `${POPUP_CLASS}--visible`;
+    const OWN_NODE_CLASSES = [MARKER_CLASS, MONTH_MARKER_CLASS, MONTH_MARKER_DASH_CLASS, PLAN_VALUE_CLASS, POPUP_CLASS];
+    // Внутри этих элементов всё наше: их перестройка (штрихи, текст цифры и попапа) не повод
+    // пересчитывать отметки
+    const OWN_SUBTREE_SELECTOR = [
+        `[${MARKER_ATTR}]`,
+        `[${MONTH_MARKER_ATTR}]`,
+        `[${PLAN_VALUE_ATTR}]`,
+        `.${POPUP_CLASS}`,
+    ].join(', ');
+
+    // Попап-пояснение. Наведение ловится по координатам курсора, а не событиями элементов:
+    // отметки остаются прозрачными для мыши, и клик рядом с ними по-прежнему открывает «График».
+    // Тонкие отметки ловим в полосе ±6px от линии и на 4px выше и ниже, цифру — с запасом 4px.
+    const MARKER_HOVER_HALF_WIDTH_PX = 6;
+    const MARKER_HOVER_VERTICAL_PX = 4;
+    const PLAN_VALUE_HOVER_PADDING_PX = 4;
+    const POPUP_GAP_PX = 8;
+    const POPUP_VIEWPORT_MARGIN_PX = 8;
+    // Темп до конца месяца округляем вверх до 5 минут: если держать его, план точно будет выполнен
+    const PACE_STEP_HOURS = 5 / 60;
+
+    // Пунктир плана на месяц собран из отдельных штрихов с постоянным шагом. Длина штриха
+    // и разрыв — целые числа физических пикселей экрана: при масштабе 125% штрих 3px занял бы
+    // 3,75 пикселя, и после округления при отрисовке соседние штрихи и разрывы расходились бы
+    // на пиксель. Поэтому и число штрихов, и отступ считаются в физических пикселях.
+    const MONTH_MARKER_DASH_PX = 3;
+    const MONTH_MARKER_GAP_PX = 2;
+    const MONTH_MARKER_MIN_DASHES = 2;
+    // Пока строка не свёрстана и высоту не измерить — столько штрихов у шкалы 8px
+    const MONTH_MARKER_FALLBACK_DASHES = 4;
+    // Chrome хранит размеры с шагом 1/64 физического пикселя и отбрасывает остаток: без запаса
+    // 4 / 1.5 * 1.5 = 3.9999… стало бы 3.984, и у дальних штрихов округление съехало бы.
+    const DEVICE_PIXEL_EPSILON = 0.005;
 
     const PROGRESS_FILL_SELECTOR = '.v-progress-linear__determinate';
 
@@ -792,18 +830,53 @@
     }
 
     /**
+     * День входит в план с полной нормой: не выходной и без отсутствия на весь день.
+     * День с отсутствием на часть дня в плане остаётся.
+     */
+    function isPlanDay(day) {
+        return !day.isDayOff && !day.isFullAbsence;
+    }
+
+    /**
      * Часы, которые должны быть отмечены к текущему моменту: потенциал за каждый
      * прошедший рабочий день без отпуска плюс накопленная часть текущего дня.
-     * День с отсутствием на часть дня остаётся в плане с полной нормой.
      */
     function computeExpectedHours(days, employeePlan, todayPlan, now) {
         const todayKey = toDayKey(now);
         const elapsedPlanDays = days
-            .filter((day) => !day.isDayOff && !day.isFullAbsence && day.key < todayKey)
+            .filter((day) => isPlanDay(day) && day.key < todayKey)
             .length;
 
         return employeePlan.dailyPotential * elapsedPlanDays
             + computeTodayHours(todayPlan, employeePlan.dailyPotential, now);
+    }
+
+    /**
+     * Минимум на конец месяца: потенциал за все дни плана, включая будущие. Отпуск, уже
+     * внесённый в график, план месяца уменьшает. remainingDays — дни плана, на которые ещё
+     * можно раскидать остаток: будущие и сегодняшний, пока не кончилась смена (график
+     * неизвестен — сегодняшний считаем).
+     */
+    function resolveMonthPlan(days, employeePlan, now) {
+        const todayKey = toDayKey(now);
+        const nowMinutes = toMinutesOfDay(now);
+        const planDays = days.filter(isPlanDay);
+        const remainingDays = planDays.filter((day) => {
+            if (day.key !== todayKey) {
+                return day.key > todayKey;
+            }
+
+            const dayPlan = resolveDayPlan(employeePlan.workDay, day.absence);
+
+            return !dayPlan || nowMinutes < dayPlan.end;
+        }).length;
+
+        return {
+            hours: employeePlan.dailyPotential * planDays.length,
+            planDays: planDays.length,
+            remainingDays,
+            dailyPotential: employeePlan.dailyPotential,
+        };
     }
 
     function resolveState(expectedHours, factHours) {
@@ -847,33 +920,51 @@
         fill.style.setProperty('border-color', STATE_COLORS[state], 'important');
     }
 
-    function applyMarker(progressRow, percent, title) {
-        let marker = progressRow.querySelector(`[${MARKER_ATTR}]`);
+    function createMarker(attr, className) {
+        const marker = document.createElement('div');
+        marker.setAttribute(attr, 'true');
+        marker.className = className;
 
-        if (!marker) {
-            marker = document.createElement('div');
-            marker.setAttribute(MARKER_ATTR, 'true');
-            marker.className = MARKER_CLASS;
-            progressRow.appendChild(marker);
-        }
+        return marker;
+    }
 
+    /**
+     * Сплошная отметка "план на сейчас" всегда идёт в DOM последней, чтобы при совпадении
+     * с пунктиром плана на месяц (последний день, прошедший месяц) рисоваться поверх него.
+     */
+    function ensureMarker(progressRow, attr, className) {
+        // Класс ставим и на уже размеченную строку: Vue может переписать её class
         progressRow.classList.add(HOST_CLASS);
 
+        const existing = progressRow.querySelector(`[${attr}]`);
+
+        if (existing) {
+            return existing;
+        }
+
+        const marker = createMarker(attr, className);
+
+        if (attr === MARKER_ATTR) {
+            progressRow.appendChild(marker);
+        } else {
+            progressRow.insertBefore(marker, progressRow.querySelector(`[${MARKER_ATTR}]`));
+        }
+
+        return marker;
+    }
+
+    function positionMarker(marker, percent) {
         const left = `${Math.round(percent * 10000) / 10000}%`;
 
         if (marker.style.left !== left) {
             marker.style.left = left;
-        }
-
-        if (marker.title !== title) {
-            marker.title = title;
         }
     }
 
     /**
      * Цифра плана в строке значений — между фактом и общим планом, показывает то же, что и отметка.
      */
-    function applyPlanValue(valuesRow, expectedHours, title) {
+    function applyPlanValue(valuesRow, text) {
         const planLabelSpan = findPlanLabelSpan(valuesRow);
 
         if (!planLabelSpan) {
@@ -889,69 +980,288 @@
             planLabelSpan.insertAdjacentElement('beforebegin', planValue);
         }
 
-        const text = formatHours(expectedHours);
-
         if (planValue.textContent !== text) {
             planValue.textContent = text;
         }
+    }
 
-        if (planValue.title !== title) {
-            planValue.title = title;
+    /**
+     * Текст цифры плана. Когда шкала уже жёлтая или красная, сразу пишем и отставание: "96ч (-9ч)".
+     */
+    function formatPlanValue(expectedHours, factHours, state) {
+        const text = formatHours(expectedHours);
+
+        return state ? `${text} (-${formatHours(expectedHours - factHours)})` : text;
+    }
+
+    function formatWorkDays(count) {
+        const lastDigit = count % 10;
+        const lastTwoDigits = count % 100;
+
+        if (lastDigit === 1 && lastTwoDigits !== 11) {
+            return `${count} рабочий день`;
+        }
+
+        if (lastDigit >= 2 && lastDigit <= 4 && (lastTwoDigits < 12 || lastTwoDigits > 14)) {
+            return `${count} рабочих дня`;
+        }
+
+        return `${count} рабочих дней`;
+    }
+
+    function ceilToStep(value, step) {
+        // запас на ошибку деления: 5,5ч / 5мин = 66,00000000000001, и без него вышло бы 67 шагов
+        return Math.ceil(value / step - 1e-6) * step;
+    }
+
+    /**
+     * На чём построен план на сейчас — последние строки попапа.
+     */
+    function describePlanBasis(planBasis) {
+        if (planBasis.override) {
+            return ['Задано вручную в настройках расширения'];
+        }
+
+        const notes = [
+            `Потенциал ${formatHours(planBasis.dailyPotential)} в день за прошедшие рабочие дни`
+            + ' и часть сегодняшней смены',
+        ];
+
+        // Отсутствие на часть дня подписываем: норма та же, но набирается быстрее, и без
+        // пояснения ускорившаяся отметка выглядит как ошибка
+        if (planBasis.absence) {
+            const { start, end } = planBasis.absence;
+
+            notes.push(
+                `Сегодня отсутствие ${formatTimeOfDay(start)}—${formatTimeOfDay(end)},`
+                + ' норма набирается за оставшееся время'
+            );
+        }
+
+        return notes;
+    }
+
+    /**
+     * Содержимое попапа: заголовок, строка статуса из кусков (кусок с tone красится в цвет
+     * шкалы), необязательная строка темпа и пояснения мелким шрифтом.
+     */
+    function buildCurrentPlanHint(expectedHours, factHours, state, planBasis) {
+        // Сравниваем в целых минутах — так же, как числа округляются в тексте
+        const deviationMinutes = Math.round((factHours - expectedHours) * 60);
+        const marked = `Отмечено ${formatHours(factHours)} · `;
+        let status;
+
+        if (deviationMinutes < 0) {
+            const lag = { text: `отставание ${formatHours(-deviationMinutes / 60)}` };
+
+            status = [{ text: marked }, state ? { ...lag, tone: state } : lag];
+        } else if (deviationMinutes > 0) {
+            status = [{ text: `${marked}опережение ${formatHours(deviationMinutes / 60)}` }];
+        } else {
+            status = [{ text: `${marked}по плану` }];
+        }
+
+        return {
+            title: `План на сейчас: ${formatHours(expectedHours)}`,
+            status,
+            pace: null,
+            notes: describePlanBasis(planBasis),
+        };
+    }
+
+    function buildMonthPlanHint(monthPlan, factHours) {
+        const leftMinutes = Math.round((monthPlan.hours - factHours) * 60);
+        const marked = `Отмечено ${formatHours(factHours)} · `;
+        const pace = leftMinutes > 0 && monthPlan.remainingDays > 0
+            ? `≈ ${formatHours(ceilToStep(leftMinutes / 60 / monthPlan.remainingDays, PACE_STEP_HOURS))} в день,`
+                + ` рабочих дней: ${monthPlan.remainingDays}`
+            : null;
+
+        return {
+            title: `Минимум на конец месяца: ${formatHours(monthPlan.hours)}`,
+            status: [{
+                text: leftMinutes > 0
+                    ? `${marked}осталось набрать ${formatHours(leftMinutes / 60)}`
+                    : `${marked}план выполнен`,
+            }],
+            pace,
+            notes: [
+                `Потенциал ${formatHours(monthPlan.dailyPotential)} × ${formatWorkDays(monthPlan.planDays)}`
+                + ' без выходных и отпусков',
+            ],
+        };
+    }
+
+    function removeMarkers(attr) {
+        for (const marker of document.querySelectorAll(`[${attr}]`)) {
+            const host = marker.parentElement;
+
+            marker.remove();
+
+            if (host && !host.querySelector(`[${MARKER_ATTR}], [${MONTH_MARKER_ATTR}]`)) {
+                host.classList.remove(HOST_CLASS);
+            }
         }
     }
 
-    function clearWorkloadDecorations() {
+    /**
+     * Убирает всё, что относится к плану на сейчас: цифру, сплошную отметку и цвет заливки.
+     */
+    function clearCurrentPlanDecorations() {
         for (const planValue of document.querySelectorAll(`[${PLAN_VALUE_ATTR}]`)) {
             planValue.remove();
         }
 
-        for (const marker of document.querySelectorAll(`[${MARKER_ATTR}]`)) {
-            marker.parentElement?.classList.remove(HOST_CLASS);
-            marker.remove();
-        }
+        removeMarkers(MARKER_ATTR);
 
         for (const progressbar of document.querySelectorAll(`[${STATE_ATTR}]`)) {
             applyState(progressbar, null);
         }
+
+        popupHints.current = null;
     }
 
-    function applyWorkloadPlan(widget, expectedHours, planHours, factHours, planNote) {
-        const percent = Math.min(100, Math.max(0, (expectedHours / planHours) * 100));
+    function clearMonthMarker() {
+        removeMarkers(MONTH_MARKER_ATTR);
+        popupHints.month = null;
+    }
 
-        if (percent <= 0) {
-            clearWorkloadDecorations();
+    function clearWorkloadDecorations() {
+        clearCurrentPlanDecorations();
+        clearMonthMarker();
+        updateHoverPopup();
+    }
+
+    function toPlanPercent(hours, planHours) {
+        return Math.min(100, Math.max(0, (hours / planHours) * 100));
+    }
+
+    /**
+     * Пунктир минимального плана на конец месяца. В конце шкалы он совпал бы с общим планом
+     * ("из 184ч") и ничего бы не сообщал, поэтому там его не рисуем.
+     */
+    function applyMonthMarker(progressRow, monthPlan, planHours, factHours) {
+        if (
+            !monthPlan
+            || !Number.isFinite(monthPlan.hours)
+            || monthPlan.hours <= EPSILON
+            || monthPlan.hours >= planHours - EPSILON
+        ) {
+            clearMonthMarker();
             return;
         }
 
-        const deficit = expectedHours - factHours;
-        const planLabel = `По плану на сейчас: ${formatHours(expectedHours)} (${planNote})`;
-        const title = deficit > EPSILON
-            ? `${planLabel}. Отставание: ${formatHours(deficit)}`
-            : planLabel;
+        const marker = ensureMarker(progressRow, MONTH_MARKER_ATTR, MONTH_MARKER_CLASS);
 
-        applyMarker(widget.progressRow, percent, title);
-        applyPlanValue(widget.valuesRow, expectedHours, title);
-        applyState(widget.progressbar, resolveState(expectedHours, factHours));
+        positionMarker(marker, toPlanPercent(monthPlan.hours, planHours));
+        syncMonthMarkerDashes(marker);
+        popupHints.month = buildMonthPlanHint(monthPlan, factHours);
+    }
+
+    /**
+     * Геометрия пунктира в физических пикселях. Штрихов берём столько, сколько их целиком
+     * помещается в высоту отметки, — пунктир не выходит за концы сплошной отметки, — а остаток
+     * делим сверху и снизу, округляя отступ до целого пикселя.
+     */
+    function computeMonthMarkerDashes(heightCss, ratio) {
+        const dash = Math.max(1, Math.round(MONTH_MARKER_DASH_PX * ratio));
+        const gap = Math.max(1, Math.round(MONTH_MARKER_GAP_PX * ratio));
+        const height = Math.floor(heightCss * ratio + DEVICE_PIXEL_EPSILON);
+        const count = Math.max(MONTH_MARKER_MIN_DASHES, Math.floor((height + gap) / (dash + gap)));
+        const length = count * dash + (count - 1) * gap;
+
+        return { dash, gap, count, offset: Math.max(0, Math.floor((height - length) / 2)) };
+    }
+
+    function toCssPixels(devicePixels, ratio) {
+        return `${(devicePixels + DEVICE_PIXEL_EPSILON) / ratio}px`;
+    }
+
+    /**
+     * Высота отметки задаётся строкой шкалы (плюс 5px сверху и снизу), поэтому пунктир
+     * сверяем при каждом пересчёте. Скрытую строку измерить нельзя — штрихи тогда не трогаем.
+     */
+    function syncMonthMarkerDashes(marker) {
+        const heightCss = marker.getBoundingClientRect().height;
+
+        if (heightCss <= 0 && marker.children.length) {
+            return;
+        }
+
+        const ratio = window.devicePixelRatio || 1;
+        const { dash, gap, count, offset } = computeMonthMarkerDashes(heightCss, ratio);
+
+        marker.style.setProperty('--pulse-plus-workload-dash', toCssPixels(dash, ratio));
+        marker.style.setProperty('--pulse-plus-workload-dash-gap', toCssPixels(gap, ratio));
+        marker.style.setProperty('padding-top', toCssPixels(offset, ratio));
+
+        const targetCount = heightCss > 0 ? count : MONTH_MARKER_FALLBACK_DASHES;
+
+        while (marker.children.length < targetCount) {
+            const dash = document.createElement('span');
+            dash.className = MONTH_MARKER_DASH_CLASS;
+            marker.appendChild(dash);
+        }
+
+        while (marker.children.length > targetCount) {
+            marker.lastElementChild.remove();
+        }
+    }
+
+    /**
+     * Масштаб страницы или переход окна на монитор с другим DPI меняют размер физического
+     * пикселя, и пунктир надо пересчитать. Запрос привязан к текущему значению, поэтому после
+     * каждого срабатывания подписываемся заново.
+     */
+    function watchDevicePixelRatio() {
+        const query = window.matchMedia(`(resolution: ${window.devicePixelRatio || 1}dppx)`);
+
+        query.addEventListener('change', () => {
+            for (const marker of document.querySelectorAll(`[${MONTH_MARKER_ATTR}]`)) {
+                syncMonthMarkerDashes(marker);
+            }
+
+            watchDevicePixelRatio();
+        }, { once: true });
+    }
+
+    /**
+     * planBasis — на чём построен план на сейчас: { dailyPotential, absence } или { override: true }.
+     * monthPlan — результат resolveMonthPlan; null, когда график месяца неизвестен
+     * (часы отметки заданы вручную).
+     */
+    function applyWorkloadPlan(widget, expectedHours, planHours, factHours, planBasis, monthPlan = null) {
+        applyMonthMarker(widget.progressRow, monthPlan, planHours, factHours);
+
+        const percent = toPlanPercent(expectedHours, planHours);
+
+        // В начале месяца, до первой смены, план на сейчас нулевой — пунктир при этом остаётся
+        if (percent <= 0) {
+            clearCurrentPlanDecorations();
+            updateHoverPopup();
+            return;
+        }
+
+        const state = resolveState(expectedHours, factHours);
+
+        positionMarker(ensureMarker(widget.progressRow, MARKER_ATTR, MARKER_CLASS), percent);
+        applyPlanValue(widget.valuesRow, formatPlanValue(expectedHours, factHours, state));
+        applyState(widget.progressbar, state);
+        popupHints.current = buildCurrentPlanHint(expectedHours, factHours, state, planBasis);
+
+        // Открытый попап сразу показывает свежие цифры и едет за сдвинувшейся отметкой
+        updateHoverPopup();
     }
 
     function formatTimeOfDay(minutes) {
         return `${pad2(Math.floor(minutes / 60))}:${pad2(Math.round(minutes % 60))}`;
     }
 
-    /**
-     * Пояснение к отметке. Отсутствие на часть дня подписываем: норма та же, но набирается
-     * быстрее, и без подписи ускорившаяся отметка выглядит как ошибка.
-     */
-    function buildPlanNote(employeePlan, todayPlan) {
-        const note = `потенциал ${formatHours(employeePlan.dailyPotential)}/день`;
-
-        if (!todayPlan?.absence) {
-            return note;
-        }
-
-        const { start, end } = todayPlan.absence;
-
-        return `${note}, сегодня отсутствие ${formatTimeOfDay(start)}—${formatTimeOfDay(end)}`;
+    function buildPlanBasis(employeePlan, todayPlan) {
+        return {
+            dailyPotential: employeePlan.dailyPotential,
+            absence: todayPlan?.absence ?? null,
+        };
     }
 
     /**
@@ -968,8 +1278,227 @@
             computeExpectedHours(days, employeePlan, todayPlan, now),
             planHours,
             factHours,
-            buildPlanNote(employeePlan, todayPlan)
+            buildPlanBasis(employeePlan, todayPlan),
+            resolveMonthPlan(days, employeePlan, now)
         );
+    }
+
+    // Содержимое попапов пересобирается при каждом пересчёте отметок; null — элемента нет
+    const popupHints = { current: null, month: null };
+    let popupElement = null;
+    let popupSignature = '';
+    let popupPlacementKey = '';
+    let lastPointer = null;
+    let pointerFrame = 0;
+
+    function readHoverRect(attr) {
+        const element = document.querySelector(`[${attr}]`);
+
+        if (!element) {
+            return null;
+        }
+
+        const rect = element.getBoundingClientRect();
+
+        return rect.width || rect.height ? rect : null;
+    }
+
+    function containsPoint(rect, x, y, padding) {
+        return x >= rect.left - padding
+            && x <= rect.right + padding
+            && y >= rect.top - padding
+            && y <= rect.bottom + padding;
+    }
+
+    /**
+     * Что под курсором. Сама цифра важнее отметок, из двух отметок побеждает ближайшая к курсору
+     * (при равенстве — сплошная, она рисуется сверху), и только потом — запас вокруг цифры.
+     */
+    function pickHoverTarget(x, y, { planValue, marker, monthMarker }) {
+        if (planValue && containsPoint(planValue, x, y, 0)) {
+            return { kind: 'current', anchor: planValue };
+        }
+
+        let nearest = null;
+
+        for (const [kind, rect] of [['current', marker], ['month', monthMarker]]) {
+            if (!rect) {
+                continue;
+            }
+
+            const distance = Math.abs(x - (rect.left + rect.width / 2));
+            const withinHeight = y >= rect.top - MARKER_HOVER_VERTICAL_PX
+                && y <= rect.bottom + MARKER_HOVER_VERTICAL_PX;
+
+            if (distance <= MARKER_HOVER_HALF_WIDTH_PX && withinHeight && (!nearest || distance < nearest.distance)) {
+                nearest = { kind, anchor: rect, distance };
+            }
+        }
+
+        if (nearest) {
+            return { kind: nearest.kind, anchor: nearest.anchor };
+        }
+
+        if (planValue && containsPoint(planValue, x, y, PLAN_VALUE_HOVER_PADDING_PX)) {
+            return { kind: 'current', anchor: planValue };
+        }
+
+        return null;
+    }
+
+    function getPopupElement() {
+        // Приложение Pulse может перестроить body — тогда попап создаётся заново
+        if (!popupElement?.isConnected) {
+            popupElement = document.createElement('div');
+            popupElement.className = POPUP_CLASS;
+            popupElement.setAttribute('role', 'tooltip');
+            popupSignature = '';
+            popupPlacementKey = '';
+            document.body.appendChild(popupElement);
+        }
+
+        return popupElement;
+    }
+
+    function createPopupLine(modifier, text = '') {
+        const line = document.createElement('div');
+        line.className = `${POPUP_CLASS}__${modifier}`;
+        line.textContent = text;
+
+        return line;
+    }
+
+    function renderPopupContent(popup, hint) {
+        const status = createPopupLine('line');
+
+        for (const segment of hint.status) {
+            const part = document.createElement('span');
+            part.textContent = segment.text;
+
+            if (segment.tone) {
+                part.className = `${POPUP_CLASS}__accent`;
+                part.style.color = STATE_COLORS[segment.tone];
+            }
+
+            status.appendChild(part);
+        }
+
+        popup.replaceChildren(
+            createPopupLine('title', hint.title),
+            status,
+            ...(hint.pace ? [createPopupLine('line', hint.pace)] : []),
+            ...hint.notes.map((note) => createPopupLine('note', note))
+        );
+    }
+
+    /**
+     * Над элементом по центру; сверху не хватает места — снизу. От краёв окна не ближе 8px.
+     */
+    function placePopup(popup, anchor) {
+        const viewportWidth = document.documentElement.clientWidth;
+        const viewportHeight = document.documentElement.clientHeight;
+        const key = [anchor.left, anchor.top, anchor.width, anchor.height, viewportWidth, viewportHeight].join('|');
+
+        if (key === popupPlacementKey) {
+            return;
+        }
+
+        popupPlacementKey = key;
+
+        // Меряем в левом верхнем углу: у правого края окна ширина попапа ужалась бы
+        popup.style.left = '0px';
+        popup.style.top = '0px';
+
+        const { width, height } = popup.getBoundingClientRect();
+        const margin = POPUP_VIEWPORT_MARGIN_PX;
+        let top = anchor.top - POPUP_GAP_PX - height;
+
+        if (top < margin) {
+            top = Math.min(anchor.bottom + POPUP_GAP_PX, viewportHeight - margin - height);
+        }
+
+        const left = anchor.left + anchor.width / 2 - width / 2;
+
+        popup.style.left = `${Math.round(Math.min(Math.max(left, margin), viewportWidth - margin - width))}px`;
+        popup.style.top = `${Math.round(Math.max(top, margin))}px`;
+    }
+
+    function hidePopup() {
+        popupElement?.classList.remove(POPUP_VISIBLE_CLASS);
+    }
+
+    function updateHoverPopup() {
+        const target = lastPointer && (popupHints.current || popupHints.month)
+            ? pickHoverTarget(lastPointer.x, lastPointer.y, {
+                planValue: readHoverRect(PLAN_VALUE_ATTR),
+                marker: readHoverRect(MARKER_ATTR),
+                monthMarker: readHoverRect(MONTH_MARKER_ATTR),
+            })
+            : null;
+        const hint = target ? popupHints[target.kind] : null;
+
+        if (!hint) {
+            hidePopup();
+            return;
+        }
+
+        const popup = getPopupElement();
+        const signature = JSON.stringify(hint);
+
+        // Перестраиваем только изменившийся попап: движение мыши не должно трогать DOM
+        if (signature !== popupSignature) {
+            renderPopupContent(popup, hint);
+            popupSignature = signature;
+            popupPlacementKey = '';
+        }
+
+        placePopup(popup, target.anchor);
+        popup.classList.add(POPUP_VISIBLE_CLASS);
+    }
+
+    function scheduleHoverUpdate() {
+        if (pointerFrame) {
+            return;
+        }
+
+        pointerFrame = window.requestAnimationFrame(() => {
+            pointerFrame = 0;
+            updateHoverPopup();
+        });
+    }
+
+    function handlePointerMove(event) {
+        if (event.pointerType === 'touch') {
+            return;
+        }
+
+        lastPointer = { x: event.clientX, y: event.clientY };
+
+        if (popupHints.current || popupHints.month) {
+            scheduleHoverUpdate();
+        }
+    }
+
+    function forgetPointer() {
+        lastPointer = null;
+        hidePopup();
+    }
+
+    /**
+     * При прокрутке и изменении окна элементы уезжают из-под курсора — проверяем наведение
+     * заново: попап скроется или переедет вслед за элементом.
+     */
+    function startHoverPopup() {
+        document.addEventListener('pointermove', handlePointerMove, { passive: true });
+        document.documentElement.addEventListener('mouseleave', forgetPointer);
+        window.addEventListener('blur', forgetPointer);
+        window.addEventListener('scroll', scheduleHoverUpdate, { capture: true, passive: true });
+        window.addEventListener('resize', scheduleHoverUpdate);
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                forgetPointer();
+            }
+        });
     }
 
     let refreshToken = 0;
@@ -1000,7 +1529,7 @@
 
         // Диагностика: часы отметки заданы вручную, данные из API не нужны
         if (planOverrideHours !== null) {
-            applyWorkloadPlan(widget, planOverrideHours, planHours, factHours, 'задано вручную');
+            applyWorkloadPlan(widget, planOverrideHours, planHours, factHours, { override: true });
             return;
         }
 
@@ -1063,13 +1592,21 @@
 
     function isOwnNode(node) {
         return node instanceof Element
-            && (node.hasAttribute(MARKER_ATTR) || node.classList.contains(MARKER_CLASS));
+            && (
+                node.hasAttribute(MARKER_ATTR)
+                || node.hasAttribute(MONTH_MARKER_ATTR)
+                || OWN_NODE_CLASSES.some((className) => node.classList.contains(className))
+            );
     }
 
     function isRelevantMutation(mutation) {
         const changedNodes = [...mutation.addedNodes, ...mutation.removedNodes];
 
         if (!changedNodes.length) {
+            return false;
+        }
+
+        if (mutation.target instanceof Element && mutation.target.closest(OWN_SUBTREE_SELECTOR)) {
             return false;
         }
 
@@ -1191,6 +1728,8 @@
         scheduleNextPlanTick();
         document.addEventListener('visibilitychange', scheduleRefresh);
 
+        watchDevicePixelRatio();
+        startHoverPopup();
         startDomObserver();
         refreshWorkloadMarker();
     }
