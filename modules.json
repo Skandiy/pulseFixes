@@ -3,6 +3,10 @@
     "scripts/notifications.js",
     "scripts/loadSettings.js",
     {
+      "key": "noteReplyButton",
+      "value": "scripts/noteReply.js"
+    },
+    {
       "key": "diagnosticTaskProjectGitWatcher",
       "value": "scripts/taskProjectGitWatcher.js"
     },

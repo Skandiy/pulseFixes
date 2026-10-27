@@ -66,6 +66,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
     eventPlanning: false,
     selectActiveTask: false,
     workloadPlanMarker: true,
+    noteReplyButton: true,
     pushNotificationsEnabled: false,
     emailTrusted: true,
     perProject: false,

@@ -135,6 +135,21 @@ The core hooking mechanism. Overrides `JSON.parse`, `JSON.stringify`, and `Respo
 - Highlight the active task in the sprint board.
 - Log request/response pairs to `localStorage` under `trickPlus.debug.log` (when `trickDebugLogging` is on).
 
+### Note reply button (`scripts/noteReply.js`)
+
+Pulse hid the «Ответить» button on task comments behind a server flag: the notes tab asks
+`РеестрЗаметок.ПолучитьОграничения` and renders the button only when the result has `ответ: true`
+(`"can-reply": limits.ответ` in `IssuePage`). The rest of the reply flow is still in Pulse — the
+«Ответить *Автор*» header above the editor and the `заметки-ответ` field sent with
+`Заметки.вставить` — so the script only flips that flag and Pulse draws its own button.
+
+It patches the `responseText` / `response` getters of the one XHR whose request body asks for the
+limits, so it does not depend on listener order. It must stay **before `rules.js`** in
+`modules.json`: `rules.js` replaces `JSON.parse`/`JSON.stringify` and, in debug mode, writes ids into
+task payloads, so other responses must not go through them (if the order breaks, the script falls
+back to a clean `JSON` from a throwaway iframe). Controlled by the `noteReplyButton` setting
+(default on).
+
 ### Event Planning module (`extension-src/event-planning/`)
 
 A Vue 3 + TypeScript app built with Vite as an IIFE bundle (`assets/event-planning.js`). Uses `@tanstack/vue-query` for data fetching. Mounts into the host page DOM in two modes:
